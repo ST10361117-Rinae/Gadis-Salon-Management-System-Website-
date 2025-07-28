@@ -1,19 +1,103 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Starter pipeline for HTML, CSS, JS, and PHP project for Firebase
 
+# This pipeline will trigger on any commit to any branch.
+# This is good for early stages to get quick feedback.
 trigger:
-- '*'
+- '*' # Triggers on changes to all branches
+
+# Link to your secret variable group for Firebase credentials
+# IMPORTANT: Replace 'FirebaseSecrets' with the actual name of your variable group!
+variables:
+- group: FirebaseSecrets
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-latest # Use a Linux agent, suitable for Node.js, PHP, and general development
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- checkout: self # Ensures the pipeline checks out your repository code
+
+- task: NodeTool@0 # Install Node.js for frontend tools (npm, bundling, etc.)
+  inputs:
+    versionSpec: '18.x' # Or a specific version you prefer (e.g., '16.x', '20.x')
+  displayName: 'Install Node.js'
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    echo "Installing frontend dependencies..."
+    npm install # Install frontend dependencies (e.g., for bundling HTML/CSS/JS)
+  displayName: 'Install Frontend Dependencies (npm)'
+  condition: and(succeeded(), exists('package.json')) # Only run if package.json exists
+
+- script: |
+    echo "Building frontend assets..."
+    npm run build # Placeholder for building frontend assets (e.g., Webpack, Vite, etc.)
+  displayName: 'Build Frontend Assets'
+  condition: and(succeeded(), exists('package.json')) # Only run if package.json exists and there's a build script
+
+- task: UsePHP@0 # Install PHP
+  inputs:
+    version: '8.2' # Or a specific PHP version you plan to use (e.g., '8.1', '8.3')
+  displayName: 'Install PHP'
+
+- script: |
+    echo "Installing PHP dependencies..."
+    composer install --no-dev --prefer-dist # Install PHP dependencies
+  displayName: 'Install PHP Dependencies (Composer)'
+  condition: and(succeeded(), exists('composer.json')) # Only run if composer.json exists
+
+# --- Placeholder for Testing Steps ---
+- script: |
+    echo "Running frontend tests (e.g., Jest, Cypress)..."
+    # npm test # Uncomment and configure when you have frontend tests
+  displayName: 'Run Frontend Tests'
+  condition: and(succeeded(), exists('package.json'))
+
+- script: |
+    echo "Running PHP tests (e.g., PHPUnit)..."
+    # vendor/bin/phpunit # Uncomment and configure when you have PHP tests
+  displayName: 'Run PHP Tests'
+  condition: and(succeeded(), exists('composer.json'))
+
+# --- Firebase Deployment Stage ---
+# This stage only runs if the previous build/test steps succeed.
+# It uses a condition to only deploy from the 'main' branch to production hosting.
+# For other branches, you might deploy to a test channel or not deploy at all.
+
+- stage: Deploy
+  displayName: 'Deploy to Firebase'
+  dependsOn: [] # This stage can run after the build stage, no specific dependency needed here
+  condition: and(ssucceeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')) # Only deploy main branch
+
+  jobs:
+  - job: DeployToFirebaseHosting
+    displayName: 'Deploy Frontend to Firebase Hosting'
+    pool:
+      vmImage: ubuntu-latest # You can reuse the same agent image
+
+    steps:
+    - task: NodeTool@0 # Ensure Node.js is available for Firebase CLI
+      inputs:
+        versionSpec: '18.x'
+      displayName: 'Install Node.js for Firebase CLI'
+
+    - script: |
+        echo "Installing Firebase CLI..."
+        npm install -g firebase-tools # Install Firebase CLI globally on the agent
+      displayName: 'Install Firebase CLI'
+
+    # --- Authentication for Firebase CLI ---
+ 
+    #Using Firebase Service Account Key (Recommended for production)
+    - script: |
+        echo "Authenticating with Firebase using Service Account Key..."
+        echo "$(FIREBASE_SERVICE_ACCOUNT_KEY)" | base64 -d > firebase_sa.json # Decode base64 to a JSON file
+        firebase login --service-account --project $(FIREBASE_PROJECT_ID) --non-interactive < firebase_sa.json # Login using the key
+        firebase deploy --only hosting --project $(FIREBASE_PROJECT_ID) --debug # Deploy
+      displayName: 'Deploy to Firebase Hosting (using Service Account)'
+      condition: and(succeeded(), ne(variables['FIREBASE_SERVICE_ACCOUNT_KEY'], '')) # Only run if service account variable is present
+      env:
+        FIREBASE_SERVICE_ACCOUNT_KEY: $(FIREBASE_SERVICE_ACCOUNT_KEY) # Pass the secret key as an environment variable
+
+    # If you have a 'public' directory for Firebase Hosting, you might also need to
+    # specify it in your firebase.json and ensure your build process outputs to it.
+    # By default, Firebase Hosting looks for index.html in the root or public/.
+    # You will create a firebase.json file later when you run `firebase init` locally.

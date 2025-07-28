@@ -86,7 +86,7 @@ steps:
 
     # --- Authentication for Firebase CLI ---
  
-    #Using Firebase Service Account Key (Recommended for production)
+    # Using Firebase Service Account Key (Recommended for production)
     - script: |
         echo "Authenticating with Firebase using Service Account Key..."
         echo "$(FIREBASE_SERVICE_ACCOUNT_KEY)" | base64 -d > firebase_sa.json # Decode base64 to a JSON file

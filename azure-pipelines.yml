@@ -65,7 +65,7 @@ steps:
 - stage: Deploy
   displayName: 'Deploy to Firebase'
   dependsOn: [] # This stage can run after the build stage, no specific dependency needed here
-  condition: and(ssucceeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')) # Only deploy main branch
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')) # Only deploy main branch
 
   jobs:
   - job: DeployToFirebaseHosting

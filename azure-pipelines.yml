@@ -39,9 +39,10 @@ stages:
       displayName: 'Build Frontend Assets'
       condition: and(succeeded(), exists('package.json')) # Only run if package.json exists and there's a build script
 
-    - task: UsePHP@0 # Install PHP
-      inputs:
-        version: '8.2' # Or a specific PHP version you plan to use (e.g., '8.1', '8.3')
+    - script: |
+        echo "Selecting PHP version 8.2"
+        sudo update-alternatives --set php /usr/bin/php8.2
+        php -v
       displayName: 'Install PHP'
 
     - script: |

@@ -31,13 +31,13 @@ stages:
         echo "Installing frontend dependencies..."
         npm install # Install frontend dependencies (e.g., for bundling HTML/CSS/JS)
       displayName: 'Install Frontend Dependencies (npm)'
-      condition: and(succeeded(), exists('package.json')) # Only run if package.json exists
+      condition: and(succeeded(), eq(true, exists('package.json'))) # Only run if package.json exists
 
     - script: |
         echo "Building frontend assets..."
         npm run build # Placeholder for building frontend assets (e.g., Webpack, Vite, etc.)
       displayName: 'Build Frontend Assets'
-      condition: and(succeeded(), exists('package.json')) # Only run if package.json exists and there's a build script
+      condition: and(succeeded(), eq(true, exists('package.json'))) # Only run if package.json exists and there's a build script
 
     - script: |
         echo "Selecting PHP version 8.2"
@@ -45,24 +45,24 @@ stages:
         php -v
       displayName: 'Install PHP'
 
-    - script: |
+     - script: |
         echo "Installing PHP dependencies..."
-        composer install --no-dev --prefer-dist # Install PHP dependencies
+        composer install --no-dev --prefer-dist
       displayName: 'Install PHP Dependencies (Composer)'
-      condition: and(succeeded(), exists('composer.json')) # Only run if composer.json exists
+      condition: and(succeeded(), eq(true, exists('composer.json'))) # Only run if composer.json exists
 
     # --- Placeholder for Testing Steps ---
     - script: |
         echo "Running frontend tests (e.g., Jest, Cypress)..."
         # npm test # Uncomment and configure when you have frontend tests
       displayName: 'Run Frontend Tests'
-      condition: and(succeeded(), exists('package.json'))
+      condition: and(succeeded(), eq(true, exists('package.json')))
 
     - script: |
         echo "Running PHP tests (e.g., PHPUnit)..."
         # vendor/bin/phpunit # Uncomment and configure when you have PHP tests
       displayName: 'Run PHP Tests'
-      condition: and(succeeded(), exists('composer.json'))
+      condition: and(succeeded(), eq(true, exists('composer.json')))
 
 # --- Firebase Deployment Stage ---
 - stage: Deploy

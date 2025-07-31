@@ -10,61 +10,63 @@ trigger:
 variables:
 - group: FirebaseSecrets
 
-pool:
-  vmImage: ubuntu-latest # Use a Linux agent, suitable for Node.js, PHP, and general development
+# Define the build stage
+stages:
+- stage: BuildAndTest
+  displayName: 'Build and Test'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build and Install Dependencies'
+    pool:
+      vmImage: ubuntu-latest # Use a Linux agent, suitable for Node.js, PHP, and general development
+    steps:
+    - checkout: self # Ensures the pipeline checks out your repository code
 
-steps:
-- checkout: self # Ensures the pipeline checks out your repository code
+    - task: NodeTool@0 # Install Node.js for frontend tools (npm, bundling, etc.)
+      inputs:
+        versionSpec: '18.x' # Or a specific version you prefer (e.g., '16.x', '20.x')
+      displayName: 'Install Node.js'
 
-- task: NodeTool@0 # Install Node.js for frontend tools (npm, bundling, etc.)
-  inputs:
-    versionSpec: '18.x' # Or a specific version you prefer (e.g., '16.x', '20.x')
-  displayName: 'Install Node.js'
+    - script: |
+        echo "Installing frontend dependencies..."
+        npm install # Install frontend dependencies (e.g., for bundling HTML/CSS/JS)
+      displayName: 'Install Frontend Dependencies (npm)'
+      condition: and(succeeded(), exists('package.json')) # Only run if package.json exists
 
-- script: |
-    echo "Installing frontend dependencies..."
-    npm install # Install frontend dependencies (e.g., for bundling HTML/CSS/JS)
-  displayName: 'Install Frontend Dependencies (npm)'
-  condition: and(succeeded(), exists('package.json')) # Only run if package.json exists
+    - script: |
+        echo "Building frontend assets..."
+        npm run build # Placeholder for building frontend assets (e.g., Webpack, Vite, etc.)
+      displayName: 'Build Frontend Assets'
+      condition: and(succeeded(), exists('package.json')) # Only run if package.json exists and there's a build script
 
-- script: |
-    echo "Building frontend assets..."
-    npm run build # Placeholder for building frontend assets (e.g., Webpack, Vite, etc.)
-  displayName: 'Build Frontend Assets'
-  condition: and(succeeded(), exists('package.json')) # Only run if package.json exists and there's a build script
+    - task: UsePHP@0 # Install PHP
+      inputs:
+        version: '8.2' # Or a specific PHP version you plan to use (e.g., '8.1', '8.3')
+      displayName: 'Install PHP'
 
-- task: UsePHP@0 # Install PHP
-  inputs:
-    version: '8.2' # Or a specific PHP version you plan to use (e.g., '8.1', '8.3')
-  displayName: 'Install PHP'
+    - script: |
+        echo "Installing PHP dependencies..."
+        composer install --no-dev --prefer-dist # Install PHP dependencies
+      displayName: 'Install PHP Dependencies (Composer)'
+      condition: and(succeeded(), exists('composer.json')) # Only run if composer.json exists
 
-- script: |
-    echo "Installing PHP dependencies..."
-    composer install --no-dev --prefer-dist # Install PHP dependencies
-  displayName: 'Install PHP Dependencies (Composer)'
-  condition: and(succeeded(), exists('composer.json')) # Only run if composer.json exists
+    # --- Placeholder for Testing Steps ---
+    - script: |
+        echo "Running frontend tests (e.g., Jest, Cypress)..."
+        # npm test # Uncomment and configure when you have frontend tests
+      displayName: 'Run Frontend Tests'
+      condition: and(succeeded(), exists('package.json'))
 
-# --- Placeholder for Testing Steps ---
-- script: |
-    echo "Running frontend tests (e.g., Jest, Cypress)..."
-    # npm test # Uncomment and configure when you have frontend tests
-  displayName: 'Run Frontend Tests'
-  condition: and(succeeded(), exists('package.json'))
-
-- script: |
-    echo "Running PHP tests (e.g., PHPUnit)..."
-    # vendor/bin/phpunit # Uncomment and configure when you have PHP tests
-  displayName: 'Run PHP Tests'
-  condition: and(succeeded(), exists('composer.json'))
+    - script: |
+        echo "Running PHP tests (e.g., PHPUnit)..."
+        # vendor/bin/phpunit # Uncomment and configure when you have PHP tests
+      displayName: 'Run PHP Tests'
+      condition: and(succeeded(), exists('composer.json'))
 
 # --- Firebase Deployment Stage ---
-# This stage only runs if the previous build/test steps succeed.
-# It uses a condition to only deploy from the 'main' branch to production hosting.
-# For other branches, you might deploy to a test channel or not deploy at all.
-
 - stage: Deploy
   displayName: 'Deploy to Firebase'
-  dependsOn: [] # This stage can run after the build stage, no specific dependency needed here
+  dependsOn: [BuildAndTest] # This stage will wait for the BuildAndTest stage to complete
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')) # Only deploy main branch
 
   jobs:
@@ -72,8 +74,8 @@ steps:
     displayName: 'Deploy Frontend to Firebase Hosting'
     pool:
       vmImage: ubuntu-latest # You can reuse the same agent image
-
     steps:
+    - checkout: self
     - task: NodeTool@0 # Ensure Node.js is available for Firebase CLI
       inputs:
         versionSpec: '18.x'
@@ -85,7 +87,6 @@ steps:
       displayName: 'Install Firebase CLI'
 
     # --- Authentication for Firebase CLI ---
- 
     # Using Firebase Service Account Key (Recommended for production)
     - script: |
         echo "Authenticating with Firebase using Service Account Key..."
@@ -96,8 +97,3 @@ steps:
       condition: and(succeeded(), ne(variables['FIREBASE_SERVICE_ACCOUNT_KEY'], '')) # Only run if service account variable is present
       env:
         FIREBASE_SERVICE_ACCOUNT_KEY: $(FIREBASE_SERVICE_ACCOUNT_KEY) # Pass the secret key as an environment variable
-
-    # If you have a 'public' directory for Firebase Hosting, you might also need to
-    # specify it in your firebase.json and ensure your build process outputs to it.
-    # By default, Firebase Hosting looks for index.html in the root or public/.
-    # You will create a firebase.json file later when you run `firebase init` locally.

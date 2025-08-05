@@ -4,13 +4,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Changed name</title>
-
-    <h1>Welcom</h1>
+    <title>Home | My Website</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
+    <header>
+        <nav>
+            <div class="logo">MyWebsite</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#">Products</a></li>
+                <li><a href="booking.html">Bookings</a></li>
+                <li><a href="basket.html"><span class="basket-icon">🛒</span> <span class="basket-count">0</span></a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
 
+    <main>
+        <section class="hero">
+            <h1>Discover Amazing Products</h1>
+            <p>Find everything you need in one place</p>
+            <a href="#" class="btn">Shop Now</a>
+        </section>
+
+        <section class="featured-products">
+            <h2>Featured Products</h2>
+            <div class="product-grid" id="featuredProducts">
+                <!-- Products will be loaded via JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 MyWebsite. All rights reserved.</p>
+    </footer>
+    <script src="js/script.js"></script>
 </body>
 
 </html>

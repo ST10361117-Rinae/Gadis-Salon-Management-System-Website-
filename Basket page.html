@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Basket | My Website</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="logo">MyWebsite</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#">Products</a></li>
+                <li><a href="booking.html">Bookings</a></li>
+                <li><a href="basket.html"><span class="basket-icon">🛒</span> <span class="basket-count">0</span></a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="basket-container">
+            <h1>Your Shopping Basket</h1>
+            <div class="basket-items" id="basketItems">
+                <!-- Basket items will be loaded via JavaScript -->
+            </div>
+            <div class="basket-summary">
+                <h3>Order Summary</h3>
+                <div class="summary-details">
+                    <p>Subtotal: <span id="subtotal">$0.00</span></p>
+                    <p>Shipping: <span id="shipping">$5.00</span></p>
+                    <p class="total">Total: <span id="total">$5.00</span></p>
+                </div>
+                <a href="payment.html" class="btn checkout-btn">Proceed to Checkout</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 MyWebsite. All rights reserved.</p>
+    </footer>
+    <script src="js/script.js"></script>
+</body>
+
+</html>

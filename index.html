@@ -4,12 +4,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Changed name</title>
+    <title>Gadis Salon - Home</title>
+    <link rel="stylesheet" href="style.css">
 
-    <h1>Welcome</h1>
 </head>
 
 <body>
+    <div id="auth-container">
+        <div class="auth-form-wrapper">
+            <h2>Welcome to Gadis Salon</h2>
+            <p>Please log in or register to continue.</p>
+
+            <form id="login-form" class="auth-form">
+                <h3>Login</h3>
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="submit-btn">Login</button>
+                <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
+            </form>
+
+            <form id="register-form" class="auth-form" style="display: none;">
+                <h3>Register</h3>
+                <div class="form-group">
+                    <label for="register-name">Name</label>
+                    <input type="text" id="register-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" required>
+                </div>
+                <button type="submit" class="submit-btn">Register</button>
+                <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="website-content" style="display: none;">
+        <header class="navbar">
+            <a href="index.html" class="logo">Gadis Salon</a>
+            <nav class="navbar-links">
+                <a href="index.html" class="active">Home</a>
+                <a href="services.html">Services</a>
+                <a href="gallery.html">Gallery</a>
+                <a href="about.html">About</a>
+                <a href="contact.html">Contact Us</a>
+            </nav>
+        </header>
+        <main>
+            <section class="hero-section">
+                <h1>Welcome to <span>Gadis Salon</span></h1>
+                <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
+                <div class="cta-buttons">
+                    <a href="contact.html" class="book-btn">Book an Appointment</a>
+                    <a href="#" class="shop-btn">Shop Our Products</a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('show-register').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+        });
+
+        document.getElementById('show-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        });
+
+        // This is a simple front-end "login" simulation. 
+        // In a real website, this would involve a back-end server.
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // In a real app, you would send this data to a server for verification.
+            // For now, we'll just "login" on submit.
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('website-content').style.display = 'block';
+        });
+
+        document.getElementById('register-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // In a real app, you would send this data to a server to create a new user.
+            // For now, we'll just "login" on submit.
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('website-content').style.display = 'block';
+        });
+    </script>
 
 </body>
 

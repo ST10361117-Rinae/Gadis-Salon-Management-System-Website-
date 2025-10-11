@@ -1,0 +1,6 @@
+# Environment variables
+.env
+js/firebase-config.js
+/firebase-config.js
+/js/firebase-config.js
+js/firebase-config.js

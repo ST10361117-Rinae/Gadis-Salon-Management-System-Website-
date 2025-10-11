@@ -5,23 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Basket | Gadis Salon</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/css/style.css">
 </head>
 
 <body>
-    <header>
-        <nav>
-            <div class="logo">Gadis Salon</div>
-            <ul class="nav-links">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="#">Products</a></li>
-                <li><a href="booking.html">Bookings</a></li>
-                <li><a href="basket.html"><span class="basket-icon">🛒</span> <span class="basket-count">0</span></a></li>
-                <li><a href="profile.html">Profile</a></li>
-                <li><a href="login.html">Login</a></li>
-            </ul>
-        </nav>
-    </header>
+   <header class="navbar">
+    <a href="index.html" class="logo">Gadis Salon</a>
+    <nav class="navbar-links">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact Us</a>
+        
+        <a href="login.html" id="login-link">Login</a> 
+        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
+        <a href="#" id="logout-button" style="display: none;">Logout</a>
+    </nav>
+</header>
 
     <main>
         <section class="basket-container">
@@ -46,5 +47,5 @@
     </footer>
     <script src="js/script.js"></script>
 </body>
-
+<script type="module" src="js/main.js"></script>
 </html>

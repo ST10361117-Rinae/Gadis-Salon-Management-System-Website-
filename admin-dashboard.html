@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Gadis Salon</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="index.html" class="logo">Gadis Salon [Admin]</a>
+        <nav class="navbar-links">
+            <a href="admin-dashboard.html" class="active">Dashboard</a>
+            <a href="#" id="profile-link" style="display: none;">Profile</a>
+            <a href="#" id="logout-button" style="display: none;">Logout</a>
+        </nav>
+    </header>
+
+    <main class="dashboard-container">
+        <header class="dashboard-header">
+            <h1 class="fade-in">Admin Dashboard</h1>
+            <p class="fade-in">Welcome back, Admin! Manage your salon from here.</p>
+        </header>
+
+        <!-- Key Metrics -->
+        <section class="metrics-grid">
+            <div class="metric-card fade-in-up" style="--delay: 100ms;">
+                <h2>Total Customers</h2>
+                <p id="total-customers">125</p>
+            </div>
+            <div class="metric-card fade-in-up" style="--delay: 200ms;">
+                <h2>Total Stylists</h2>
+                <p id="total-stylists">8</p>
+            </div>
+            <div class="metric-card fade-in-up" style="--delay: 300ms;">
+                <h2>Pending Bookings</h2>
+                <p id="pending-bookings">12</p>
+            </div>
+            <div class="metric-card fade-in-up" style="--delay: 400ms;">
+                <h2>Completed Orders</h2>
+                <p id="completed-orders">340</p>
+            </div>
+        </section>
+
+        <!-- Management Sections -->
+        <section class="management-section fade-in" style="--delay: 500ms;">
+            <h2>Management</h2>
+            <div class="management-grid">
+                <a href="#" class="manage-card">Manage Products</a>
+                <a href="#" class="manage-card">Manage Hairstyles</a>
+                <a href="#" class="manage-card">Manage Users</a>
+                <a href="#" class="manage-card">View All Bookings</a>
+                <a href="#" class="manage-card">Support Tickets</a>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module" src="js/main.js"></script>
+    <script src="js/dashboard-animations.js"></script>
+</body>
+</html>

@@ -4,8 +4,8 @@
  */
 
 // Import Firebase functions and your config
-import { auth, db, storage } from './firebase-config.js'; 
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { auth, db, storage } from './firebase-config.js';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs, FieldValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
@@ -403,23 +403,24 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribeSupportChat = onSnapshot(q, (snapshot) => {
 
             const docs = snapshot.docs;
+
+            // 1. Check if the LAST message is from someone else (i.e., the admin)
             if (docs.length > 0) {
                 const lastMessage = docs[docs.length - 1].data();
-                // If the last message is NOT from the stylist, it means they have seen the conversation.
                 if (lastMessage.senderUid !== currentStylistId) {
+                    // 2. If it is, we tell Firestore to update our old messages.
                     markPreviousMessagesAsRead(ticketId);
                 }
             }
 
+              // 3. We build the HTML with the data we have RIGHT NOW.
             let messagesHtml = '';
-            snapshot.forEach(doc => {
+            docs.forEach(doc => {
                 const message = doc.data();
-                const bubbleClass = message.senderUid === currentStylistId ? 'stylist' : 'customer'; // Assuming admin replies look like customer
-
+                const bubbleClass = message.senderUid === currentStylistId ? 'stylist' : 'customer';
+                
                 let statusTicks = '';
                 if (bubbleClass === 'stylist') {
-                    // We'll need a status field on support replies for this to work.
-                    // Assuming it might be there or can be added.
                     statusTicks = getStatusTicks(message.status || 'SENT'); 
                 }
 
@@ -483,12 +484,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- New Ticket Modal Logic ---
-    function openNewTicketModal() {
+     function openNewTicketModal() {
         newTicketModalOverlay.style.display = 'flex';
+        setTimeout(() => {
+            newTicketModalOverlay.style.opacity = '1';
+        }, 10);
     }
     function closeNewTicketModal() {
-        newTicketModalOverlay.style.display = 'none';
-        newTicketForm.reset();
+        newTicketModalOverlay.style.opacity = '0';
+        setTimeout(() => {
+            newTicketModalOverlay.style.display = 'none';
+            newTicketForm.reset();
+        }, 200);
     }
 
     newTicketBtn.addEventListener('click', openNewTicketModal);
@@ -497,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
     newTicketForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const message = newTicketForm.message.value.trim();
-        if (message === '') return;
+        if (message === '' || !currentUserData) return;
 
         try {
             await addDoc(collection(db, "support_messages"), {
@@ -506,7 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 senderName: currentUserData.name,
                 senderEmail: currentUserData.email,
                 status: "New",
-                timestamp: serverTimestamp()
+                timestamp: serverTimestamp(),
+                // Initialize the participants array with the creator's ID
+                participantUids: [currentStylistId]
             });
             alert('Support ticket sent successfully!');
             closeNewTicketModal();

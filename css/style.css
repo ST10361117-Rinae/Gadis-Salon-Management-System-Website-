@@ -1164,6 +1164,15 @@ margin-left: 0;
 }
 /* --- END OF NEW SECTION --- */
 
+/* --- ADD THIS NEW SECTION TO STYLE THE TICKET SUBMIT BUTTON --- */
+#new-ticket-form .btn {
+    width: 100%; /* Make the button full width inside the modal footer */
+    padding: 0.8rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+/* --- END OF NEW SECTION --- */
+
 /* --- ADD THIS NEW SECTION FOR SUPPORT PAGE FIXES --- */
 
 /* Style the 'Create New Ticket' button */

@@ -228,54 +228,46 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Found ${querySnapshot.size} pending booking(s) in total. Checking each one...`);
 
             const promises = querySnapshot.docs.map(async (bookingDoc) => {
-                const booking = { id: bookingDoc.id, ...bookingDoc.data() };
-                
-                console.log(`--- Checking booking: ${booking.id} (${booking.serviceName}) ---`);
+               
+                const booking = { ...bookingDoc.data(), id: bookingDoc.id };
                 
                 const hairstyleDocRef = doc(db, "hairstyles", booking.hairstyleId);
                 const hairstyleDoc = await getDoc(hairstyleDocRef);
 
-                if (hairstyleDoc.exists()) {
+                let shouldDisplay = false;
+                if (hairstyleDoc.exists() && currentUserData) {
                     const hairstyle = hairstyleDoc.data();
-                    const availableStylists = hairstyle.availableStylistIds || [];
-                    const isStylistQualified = availableStylists.includes(stylistId);
+                    const isStylistQualified = hairstyle.availableStylistIds && hairstyle.availableStylistIds.includes(stylistId);
 
-                    // --- NEW DETAILED LOG ---
-                    console.log({
-                        bookingFor: booking.stylistName,
-                        isCorrectStylistName: booking.stylistName === "Any Available",
-                        hairstyleRequires: availableStylists,
-                        loggedInStylistId: stylistId,
-                        isStylistQualified: isStylistQualified
-                    });
+                    const isForAnyAvailable = booking.stylistName === "Any Available" && isStylistQualified;
+                    const isDirectlyAssigned = booking.stylistId === stylistId || booking.stylistName === currentUserData.name;
 
-                    if (booking.stylistName === "Any Available" && isStylistQualified) {
-                        console.log(`✅ SUCCESS: Booking ${booking.id} will be displayed.`);
-                        hasPendingBookings = true;
-                        const imageUrl = hairstyle.imageUrl || 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
-                        return `
-                            <div class="booking-card pending" data-booking-id="${booking.id}">
-                                <img src="${imageUrl}" alt="${booking.serviceName}">
-                                <div class="card-content">
-                                    <h3>${booking.serviceName}</h3>
-                                    <p><strong>Customer:</strong> ${booking.customerName}</p>
-                                    <p><strong>Date:</strong> ${booking.date} at ${booking.time}</p>
-                                </div>
-                                <div class="card-actions">
-                                    <button class="action-btn accept" data-id="${booking.id}">Accept</button>
-                                    <button class="action-btn decline" data-id="${booking.id}">Decline</button>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        console.log(`❌ SKIPPED: Booking ${booking.id} did not meet the conditions.`);
+                    if (isForAnyAvailable || isDirectlyAssigned) {
+                        shouldDisplay = true;
                     }
-                } else {
-                    console.log(`❌ SKIPPED: Hairstyle document with ID ${booking.hairstyleId} not found.`);
+                }
+
+                if (shouldDisplay) {
+                    hasPendingBookings = true;
+                    const imageUrl = hairstyleDoc.data().imageUrl || 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
+                    return `
+                        <div class="booking-card pending" data-booking-id="${booking.id}">
+                            <img src="${imageUrl}" alt="${booking.serviceName}">
+                            <div class="card-content">
+                                <h3>${booking.serviceName}</h3>
+                                <p><strong>Customer:</strong> ${booking.customerName}</p>
+                                <p><strong>Date:</strong> ${booking.date} at ${booking.time}</p>
+                            </div>
+                            <div class="card-actions">
+                                <button class="action-btn accept" data-id="${booking.id}">Accept</button>
+                                <button class="action-btn decline" data-id="${booking.id}">Decline</button>
+                            </div>
+                        </div>
+                    `;
                 }
                 return null;
             });
-            
+
             const resolvedCards = await Promise.all(promises);
             const cardsHtml = resolvedCards.filter(card => card !== null).join('');
 
@@ -626,22 +618,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (target.matches('.decline')) {
-                if (confirm('Are you sure you want to decline this booking?')) {
-                    const bookingRef = doc(db, "bookings", bookingId);
-                    try {
-                        // For simplicity, we'll mark as Declined. A more complex app
-                        // might remove the stylist from an array of potential stylists.
-                        await updateDoc(bookingRef, {
-                            status: "Declined"
-                        });
-                        alert('Booking declined.');
-                    } catch (error) {
-                        console.error("Error declining booking: ", error);
-                        alert("Failed to decline booking. Please try again.");
-                    }
+            if (target.matches('.action-btn.decline')) {
+            // 1. Ask the stylist for a reason using a prompt.
+            const reason = prompt("Please provide a reason for declining this booking:");
+
+            // 2. Only proceed if the stylist entered a reason.
+            if (reason) { 
+                const bookingRef = doc(db, "bookings", bookingId);
+                try {
+                    // 3. Update the booking with the new status and the reason.
+                    await updateDoc(bookingRef, {
+                        status: "Declined",
+                        cancellationReason: reason
+                    });
+                    alert('Booking declined.');
+                } catch (error) {
+                    console.error("Error declining booking: ", error);
+                    alert("Failed to decline booking. Please try again.");
                 }
             }
+            // If the user clicks "Cancel" on the prompt, nothing happens.
+        }
 
             /*
             if (target.matches('.mark-ready')) {

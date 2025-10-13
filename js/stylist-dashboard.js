@@ -778,6 +778,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- NEW: Function to update stylist's messages to "Read" in booking chat ---
+    async function markBookingMessagesAsRead(bookingId) {
+        const repliesRef = collection(db, "bookings", bookingId, "messages");
+        const q = query(repliesRef, where("senderUid", "==", currentStylistId), where("status", "!=", "Read"));
+        
+        try {
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach(docSnap => {
+                const messageRef = doc(db, "bookings", bookingId, "messages", docSnap.id);
+                updateDoc(messageRef, { status: "Read" });
+            });
+        } catch (error) {
+            console.error("Error marking booking messages as read:", error);
+        }
+    }
+
     // --- NEW: Modal and Chat Functions ---
 
     async function openBookingModal(bookingId) {
@@ -804,32 +820,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const messagesRef = collection(db, "bookings", bookingId, "messages");
         const q = query(messagesRef, orderBy("timestamp"));
 
-        unsubscribeChat = onSnapshot(q, (snapshot) => {
+         unsubscribeChat = onSnapshot(q, (snapshot) => {
+            // --- NEW: Auto-read logic for booking chat ---
+            const docs = snapshot.docs;
+            if (docs.length > 0) {
+                const lastMessage = docs[docs.length - 1].data();
+                if (lastMessage.senderUid !== currentStylistId) {
+                    markBookingMessagesAsRead(bookingId);
+                }
+            }
+            
             let messagesHtml = '';
-            snapshot.forEach(doc => {
+            docs.forEach(doc => {
                 const message = doc.data();
                 const bubbleClass = message.senderUid === currentStylistId ? 'stylist' : 'customer';
                 
-                // --- NEW: Generate status ticks for stylist's messages ---
+                // --- FIX: Add sender name and formatted timestamp ---
                 let statusTicks = '';
                 if (bubbleClass === 'stylist') {
-                    statusTicks = getStatusTicks(message.status);
+                    statusTicks = getStatusTicks(message.status || 'SENT');
                 }
 
                 messagesHtml += `
                     <div class="chat-bubble ${bubbleClass}">
+                        <div class="chat-sender-name">${message.senderName}</div>
                         <span class="message-text">${message.messageText}</span>
-                        ${statusTicks}
+                        <div class="chat-footer">
+                            <span class="chat-timestamp">${formatTimestamp(message.timestamp)}</span>
+                            ${statusTicks}
+                        </div>
                     </div>
                 `;
             });
             chatMessagesContainer.innerHTML = messagesHtml;
-            // Auto-scroll to the bottom
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         });
     }
 
-// --- NEW: Helper function to create status tick icons ---
+     // --- NEW HELPER FUNCTION FOR TIMESTAMPS ---
+    function formatTimestamp(fbTimestamp) {
+        if (!fbTimestamp || !fbTimestamp.toDate) {
+            return '';
+        }
+        const date = fbTimestamp.toDate();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    // --- NEW: Helper function to create status tick icons ---
     function getStatusTicks(status) {
         let ticksHtml = '';
         switch (status) {

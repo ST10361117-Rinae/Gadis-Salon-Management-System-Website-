@@ -1029,17 +1029,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bubbleClass === 'admin') {
                     statusTicks = getStatusTicks(message.status || 'SENT');
                 }
+                
+                // --- THIS IS THE FIX: Add sender name and formatted timestamp ---
                 messagesHtml += `
                     <div class="chat-bubble ${bubbleClass}">
                         <div class="chat-sender-name">${message.senderName}</div>
                         <span class="message-text">${message.messageText}</span>
-                        ${statusTicks}
+                        <div class="chat-footer">
+                            <span class="chat-timestamp">${formatTimestamp(message.timestamp)}</span>
+                            ${statusTicks}
+                        </div>
                     </div>
                 `;
             });
             adminTicketConversationContainer.innerHTML = messagesHtml;
             adminTicketConversationContainer.scrollTop = adminTicketConversationContainer.scrollHeight;
         });
+    }
+
+    // --- NEW HELPER FUNCTION FOR TIMESTAMPS ---
+    function formatTimestamp(fbTimestamp) {
+        if (!fbTimestamp || !fbTimestamp.toDate) {
+            return '';
+        }
+        const date = fbTimestamp.toDate();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
     }
 
     adminTicketListContainer.addEventListener('click', (e) => {

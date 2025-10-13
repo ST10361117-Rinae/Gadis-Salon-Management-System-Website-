@@ -973,8 +973,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             let ticketsHtml = '';
-            snapshot.forEach(doc => {
-                const ticket = { id: doc.id, ...doc.data() };
+            snapshot.forEach(ticketDoc => {
+                const ticket = { ...ticketDoc.data(), id: ticketDoc.id };
                 const statusClass = `status-${ticket.status.toLowerCase()}`;
                 const activeClass = ticket.id === currentOpenTicketId ? 'active' : '';
                 ticketsHtml += `
@@ -1029,7 +1029,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bubbleClass === 'admin') {
                     statusTicks = getStatusTicks(message.status || 'SENT');
                 }
-                messagesHtml += `<div class="chat-bubble ${bubbleClass}"><span class="message-text">${message.messageText}</span>${statusTicks}</div>`;
+                messagesHtml += `
+                    <div class="chat-bubble ${bubbleClass}">
+                        <div class="chat-sender-name">${message.senderName}</div>
+                        <span class="message-text">${message.messageText}</span>
+                        ${statusTicks}
+                    </div>
+                `;
             });
             adminTicketConversationContainer.innerHTML = messagesHtml;
             adminTicketConversationContainer.scrollTop = adminTicketConversationContainer.scrollHeight;
@@ -1052,7 +1058,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await addDoc(collection(db, "support_messages", currentOpenTicketId, "replies"), {
                 messageText: message,
                 senderUid: currentAdminId,
-                senderName: "Admin Support",
+                senderName: currentAdminData.name || "Admin", 
                 status: "SENT",
                 timestamp: serverTimestamp()
             });

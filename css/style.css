@@ -1828,3 +1828,15 @@ thead th.sorted i {
 }
 /* --- END OF NEW SECTION --- */
 
+/* --- ADD THIS NEW SECTION FOR CHAT SENDER NAME --- */
+.chat-sender-name {
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: 4px;
+    opacity: 0.8;
+}
+
+.chat-bubble.customer .chat-sender-name {
+    color: var(--muted);
+}
+/* --- END OF NEW SECTION --- */

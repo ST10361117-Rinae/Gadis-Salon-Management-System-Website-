@@ -1772,3 +1772,59 @@ thead th.sorted i {
     display: none; /* Hidden by default */
 }
 /* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR AUTH PAGE STYLING --- */
+.forgot-password-link {
+    text-align: right;
+    margin: -0.5rem 0 1rem;
+    font-size: 0.9em;
+}
+
+.forgot-password-link a {
+    color: var(--primary);
+    text-decoration: none;
+}
+.forgot-password-link a:hover {
+    text-decoration: underline;
+}
+
+.form-description {
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+    color: #6c757d;
+}
+/* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR AUTH FORM STYLING --- */
+
+/* Consistent styling for all form inputs */
+.login-form .form-group input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(124, 79, 85, 0.08);
+    font-size: 0.95rem;
+    outline: none;
+}
+
+/* Container for the password input and icon */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Make sure the input doesn't overlap the icon */
+.password-wrapper input {
+    padding-right: 35px; /* Add space on the right for the icon */
+}
+
+/* Position and style the eye icon */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    cursor: pointer;
+    color: #aaa;
+}
+/* --- END OF NEW SECTION --- */
+

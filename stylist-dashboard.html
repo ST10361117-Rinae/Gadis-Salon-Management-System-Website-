@@ -27,7 +27,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main class="main-content">
+        <main class="main-content fade-in-up">
             <header class="dashboard-header">
                 <button class="hamburger-menu" id="hamburger-menu">
                     <i class="fas fa-bars"></i>
@@ -38,7 +38,7 @@
 
             <div id="content-area">
                 <!-- Schedule Page Content (Default) -->
-                <section id="schedule-page" class="dashboard-page">
+                <section id="schedule-page" class="dashboard-page fade-in-up">
                     <!-- NEW: Use a container for cards -->
                     <div id="appointments-container" class="card-grid fade-in-up">
                         <p>Loading schedule...</p>
@@ -54,7 +54,7 @@
                 </section>
                 
                 <!-- Inventory Page -->
-                <section id="inventory-page" class="dashboard-page" style="display: none;">
+                <section id="inventory-page" class="dashboard-page fade-in-up" style="display: none;">
                     <!-- CHANGE: Replaced the table with a grid container -->
                     <div id="inventory-container" class="product-grid">
                         <!-- Product cards will be loaded here from Firestore -->
@@ -62,7 +62,7 @@
                 </section>
 
                 <!-- Product Orders Page -->
-                <section id="orders-page" class="dashboard-page" style="display: none;">
+                <section id="orders-page" class="dashboard-page fade-in-up" style="display: none;">
                     <!-- CHANGE: Replaced the table with a card grid -->
                     <div id="orders-container" class="card-grid fade-in-up">
                         <!-- Order cards will be loaded here -->
@@ -71,7 +71,7 @@
 
 
                 <!-- Profile Page -->
-                <section id="profile-page" class="dashboard-page" style="display: none;">
+                <section id="profile-page" class="dashboard-page fade-in-up" style="display: none;">
                     <div class="profile-form-container fade-in-up">
                         <!-- ADD THIS PROFILE PICTURE SECTION -->
                         <div class="profile-picture-container">
@@ -236,6 +236,7 @@
     
     <script type="module" src="js/main.js"></script>
     <script type="module" src="js/stylist-dashboard.js"></script>
+    <script src="js/script.js"></script>
 </body>
 </html>
 

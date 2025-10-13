@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const productModalImg = document.getElementById('product-modal-img');
     const productModalVariantsTable = document.getElementById('product-modal-variants-table');
     const newBookingsLink = document.querySelector('a[href="#bookings"]');
+    const ordersLink = document.querySelector('a[href="#orders"]');
 
     const profileImg = document.getElementById('profile-img');
     const profilePictureUpload = document.getElementById('profile-picture-upload');
@@ -222,33 +223,66 @@ document.addEventListener('DOMContentLoaded', () => {
         const q = query(collection(db, "bookings"), where("status", "==", "Pending"));
 
         onSnapshot(q, async (querySnapshot) => {
-            let cardsHtml = '';
             let hasPendingBookings = false;
 
-            for (const docSnap of querySnapshot.docs) {
-                const booking = docSnap.data();
-                // We need to fetch the hairstyle to check if this stylist can accept it
+            console.log(`Found ${querySnapshot.size} pending booking(s) in total. Checking each one...`);
+
+            const promises = querySnapshot.docs.map(async (bookingDoc) => {
+                const booking = { id: bookingDoc.id, ...bookingDoc.data() };
+                
+                console.log(`--- Checking booking: ${booking.id} (${booking.serviceName}) ---`);
+                
                 const hairstyleDocRef = doc(db, "hairstyles", booking.hairstyleId);
                 const hairstyleDoc = await getDoc(hairstyleDocRef);
-                
-                if (hairstyleDoc.exists() && hairstyleDoc.data().availableStylistIds && hairstyleDoc.data().availableStylistIds.includes(stylistId)) {
-                    hasPendingBookings = true;
-                    const imageUrl = hairstyleDoc.data().imageUrl;
-                    cardsHtml += `
-                        <div class="booking-card pending" data-booking-id="${docSnap.id}">
-                            <img src="${imageUrl}" alt="${booking.serviceName}">
-                            <div class="card-content">
-                                <h3>${booking.serviceName}</h3>
-                                <p><strong>Customer:</strong> ${booking.customerName}</p>
-                                <p><strong>Date:</strong> ${booking.date} at ${booking.time}</p>
+
+                if (hairstyleDoc.exists()) {
+                    const hairstyle = hairstyleDoc.data();
+                    const availableStylists = hairstyle.availableStylistIds || [];
+                    const isStylistQualified = availableStylists.includes(stylistId);
+
+                    // --- NEW DETAILED LOG ---
+                    console.log({
+                        bookingFor: booking.stylistName,
+                        isCorrectStylistName: booking.stylistName === "Any Available",
+                        hairstyleRequires: availableStylists,
+                        loggedInStylistId: stylistId,
+                        isStylistQualified: isStylistQualified
+                    });
+
+                    if (booking.stylistName === "Any Available" && isStylistQualified) {
+                        console.log(`✅ SUCCESS: Booking ${booking.id} will be displayed.`);
+                        hasPendingBookings = true;
+                        const imageUrl = hairstyle.imageUrl || 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
+                        return `
+                            <div class="booking-card pending" data-booking-id="${booking.id}">
+                                <img src="${imageUrl}" alt="${booking.serviceName}">
+                                <div class="card-content">
+                                    <h3>${booking.serviceName}</h3>
+                                    <p><strong>Customer:</strong> ${booking.customerName}</p>
+                                    <p><strong>Date:</strong> ${booking.date} at ${booking.time}</p>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="action-btn accept" data-id="${booking.id}">Accept</button>
+                                    <button class="action-btn decline" data-id="${booking.id}">Decline</button>
+                                </div>
                             </div>
-                            <div class="card-actions">
-                                <button class="action-btn accept" data-id="${docSnap.id}">Accept</button>
-                                <button class="action-btn decline" data-id="${docSnap.id}">Decline</button>
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    } else {
+                        console.log(`❌ SKIPPED: Booking ${booking.id} did not meet the conditions.`);
+                    }
+                } else {
+                    console.log(`❌ SKIPPED: Hairstyle document with ID ${booking.hairstyleId} not found.`);
                 }
+                return null;
+            });
+            
+            const resolvedCards = await Promise.all(promises);
+            const cardsHtml = resolvedCards.filter(card => card !== null).join('');
+
+            if (hasPendingBookings) {
+                newBookingsContainer.innerHTML = cardsHtml;
+            } else {
+                newBookingsContainer.innerHTML = '<p>No new booking requests for you.</p>';
             }
 
             // --- NEW: Notification Dot Logic ---
@@ -335,6 +369,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
                 ordersContainer.innerHTML = html;
+
+                // --- Notification Dot Logic for Orders ---
+                let notificationDot = ordersLink.querySelector('.notification-dot');
+                if (!querySnapshot.empty) { // If there are pending orders
+                    if (!notificationDot) {
+                        notificationDot = document.createElement('span');
+                        notificationDot.className = 'notification-dot';
+                        ordersLink.appendChild(notificationDot);
+                    }
+                    notificationDot.style.display = 'block';
+                } else { // If there are no pending orders
+                    if (notificationDot) {
+                        notificationDot.style.display = 'none';
+                    }
+                }
             });
         }
     

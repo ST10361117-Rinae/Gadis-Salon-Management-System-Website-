@@ -1,38 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gadis Salon - Home</title>
+    <title>Gadis Salon - Welcome</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
     <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
-   <header class="navbar">
-    <a href="index.html" class="logo">Gadis Salon</a>
-    <nav class="navbar-links">
-        <a href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact Us</a>
-        
-        <a href="login.html" id="login-link">Login</a> 
-        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
-        <a href="#" id="logout-button" style="display: none;">Logout</a>
-    </nav>
-</header>
+    <header class="navbar transparent" id="navbar">
+        <a href="#home" class="logo">Gadis Salon</a>
+        <nav class="navbar-links">
+            <a href="#home">Home</a>
+            <a href="#services">Services</a>
+            <a href="#shop">Shop</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+            
+            <a href="login.html" id="login-link">Login</a> 
+            <a href="#" id="profile-link" style="display: none;">Profile</a>
+            <a href="#" id="logout-button" style="display: none;">Logout</a>
+        </nav>
+        <button class="hamburger-menu" id="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+    </header>
+
+    <!-- ADDED Mobile Navigation Menu (hidden by default) -->
+    <div class="mobile-nav" id="mobile-nav">
+        <a href="#home" class="mobile-nav-link">Home</a>
+        <a href="#services" class="mobile-nav-link">Services</a>
+        <a href="#shop" class="mobile-nav-link">Shop</a>
+        <a href="#about" class="mobile-nav-link">About</a>
+        <a href="#contact" class="mobile-nav-link">Contact</a>
+    </div>
 
     <main>
-        <section class="hero-section">
-            <h1>Welcome to <span>Gadis Salon</span></h1>
-            <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
-            <div class="cta-buttons">
-                <a href="contact.html" class="book-btn">Book an Appointment</a>
-                <a href="#" class="shop-btn">Shop Our Products</a>
+        <!-- RESTRUCTURED Hero Section for Multi-Layer Parallax -->
+        <section id="home" class="hero-parallax">
+            <div class="parallax-bg" id="parallax-bg" style="background-image: url('https://images.pexels.com/photos/3992870/pexels-photo-3992870.jpeg');"></div>
+            <img src="images/model-foreground.png" alt="Model" class="parallax-fg" id="parallax-fg" onerror="this.style.display='none'">
+            <div class="hero-content fade-in-up">
+                <h1>Welcome to <span>Gadis Salon</span></h1>
+                <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
+                <a href="#services" class="book-btn">Explore Our Services</a>
             </div>
+        </section>
+
+        <!-- Section 2: Services (Hairstyles) -->
+        <section id="services" class="content-section container">
+            <h2>Our Signature Hairstyles</h2>
+            <div id="hairstyles-grid" class="product-grid">
+                <!-- Hairstyle cards will be loaded here by JS -->
+            </div>
+        </section>
+
+        <!-- Section 3: Shop (Products) -->
+        <section id="shop" class="content-section container">
+            <h2>Featured Products</h2>
+            <div id="products-grid" class="product-grid">
+                <!-- Product cards will be loaded here by JS -->
+            </div>
+        </section>
+
+        <!-- Section 4: About -->
+        <section id="about" class="content-section container">
+             <h2>About Us</h2>
+             <p>Gadis Salon was founded with a passion for beauty and a commitment to exceptional client experience. Our skilled stylists stay on top of the latest trends to deliver top-quality service tailored to your needs.</p>
+        </section>
+
+        <!-- Section 5: Contact -->
+        <section id="contact" class="content-section container">
+             <h2>Contact Us</h2>
+             <!-- You can add your existing contact form here later -->
+             <p>Get in touch with us for bookings and inquiries.</p>
         </section>
     </main>
 
@@ -65,7 +104,9 @@
             <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
         </div>
     </footer>
+    <script src="https://kit.fontawesome.com/4d6ab489c8.js" crossorigin="anonymous"></script>
+    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/home.js"></script> <!-- A new, dedicated script for the homepage -->
 </body>
-<script type="module" src="js/main.js"></script>
-<script src="js/script.js"></script>
 </html>
+

@@ -1905,3 +1905,169 @@ thead th.sorted i {
     white-space: nowrap;
 }
 /* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR THE NEW HOMEPAGE DESIGN --- */
+
+/* Transparent Navbar */
+.navbar.transparent {
+    background: transparent;
+    position: fixed; /* Make it stick to the top */
+    width: 100%;
+    transition: background-color 300ms ease;
+}
+.navbar.scrolled {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(124, 79, 85, 0.06);
+}
+
+/* Hero Section with Parallax Effect */
+.hero-parallax {
+    height: 100vh; /* Full screen height */
+    background-image: url('https://images.pexels.com/photos/3992870/pexels-photo-3992870.jpeg'); /* Placeholder Image */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed; /* This creates the parallax effect! */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+}
+
+.hero-content {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2rem 3rem;
+    border-radius: var(--radius-lg);
+}
+
+.hero-content h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.hero-content p {
+    font-size: 1.2rem;
+    max-width: 600px;
+}
+
+/* General Content Section Styling */
+.content-section {
+    padding: 4rem 1rem;
+}
+.content-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--muted);
+}
+/* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR ADVANCED HOMEPAGE DESIGN --- */
+
+/* Mobile Menu & Hamburger */
+.hamburger-menu {
+    display: none; /* Hidden on desktop */
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1001; /* Above the navbar */
+}
+
+.mobile-nav {
+    position: fixed;
+    top: 0;
+    right: -100%; /* Start off-screen */
+    width: 70%;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: right 0.4s ease-in-out;
+}
+.mobile-nav.open {
+    right: 0;
+}
+.mobile-nav a {
+    font-size: 1.5rem;
+    padding: 1rem 0;
+    text-decoration: none;
+    color: var(--muted);
+}
+
+
+/* Advanced Parallax Styling */
+.hero-parallax {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    overflow: hidden; /* Crucial for containing the layers */
+}
+
+.parallax-bg, .parallax-fg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 110%; /* Slightly taller to prevent gaps during scroll */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+.parallax-fg {
+    height: 100%;
+    width: auto;
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    /* Centering the foreground image */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.hero-content {
+    position: relative; /* Ensure it's on top of the parallax layers */
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2rem 3rem;
+    border-radius: var(--radius-lg);
+}
+
+/* Staggered Animation Class */
+.stagger-in > * {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    transition-delay: var(--delay);
+}
+.stagger-in.show > * {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .navbar-links {
+        display: none; /* Hide desktop links on mobile */
+    }
+    .hamburger-menu {
+        display: block; /* Show hamburger on mobile */
+    }
+    .hero-content {
+        padding: 1.5rem;
+    }
+}
+/* --- END OF NEW SECTION --- */

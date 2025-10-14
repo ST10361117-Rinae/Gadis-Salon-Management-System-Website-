@@ -2,89 +2,126 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gadis Salon - Services</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gadis Salon - Services</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
-   <header class="navbar">
+  <!-- Navbar -->
+  <header class="navbar">
     <a href="index.html" class="logo">Gadis Salon</a>
     <nav class="navbar-links">
-        <a href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact Us</a>
-        
-        <a href="login.html" id="login-link">Login</a> 
-        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
-        <a href="#" id="logout-button" style="display: none;">Logout</a>
+      <a href="index.html">Home</a>
+      <a href="services.html" class="active">Services</a>
+      <a href="about.html">About</a>
+      <a href="index.html#contact">Contact Us</a>
+
+      <!-- Icons -->
+      <a href="#" class="icon-link"><i class="fas fa-shopping-cart"></i></a>
+      <a href="#" class="icon-link"><i class="fas fa-heart"></i></a>
+      <a href="profile.html" class="icon-link"><i class="fas fa-user"></i></a>
+
+      <a href="login.html" id="login-link">Login</a>
+      <a href="profile.html" id="profile-link" style="display:none;">Profile</a>
+      <a href="#" id="logout-button" style="display:none;">Logout</a>
     </nav>
-</header>
+  </header>
 
-    <main>
-        <section class="content-section container">
-            <h1>Our Services</h1>
-            <div class="service-list">
-                <div class="service-card">
-                    <h2>Haircuts & Styling</h2>
-                    <p>Fresh trims & makeovers.</p>
-                </div>
-                <div class="service-card">
-                    <h2>Color & Highlights</h2>
-                    <p>Balayage & vibrant colors.</p>
-                </div>
-                <div class="service-card">
-                    <h2>Manicures & Pedicures</h2>
-                    <p>Luxurious nail treatments.</p>
-                </div>
-                <div class="service-card">
-                    <h2>Makeup & Aesthetics</h2>
-                    <p>Pro makeup & facials.</p>
-                </div>
-                <div class="service-card">
-                    <h2>Bridal Packages</h2>
-                    <p>Hair & makeup for weddings.</p>
-                </div>
-                <div class="service-card">
-                    <h2>Scalp Treatments</h2>
-                    <p>Nourishing scalp care.</p>
-                </div>
-            </div>
-        </section>
-    </main>
+  <!-- Main Section -->
+  <main>
+    <section class="content-section container">
+      <h1>Our Salon Services</h1>
+      <p>At Gadis Salon, we offer a range of professional beauty and hair services to help you look and feel your best.</p>
 
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-info">
-                <h3>Gadis Salon</h3>
-                <p>123 Beauty Lane, Glamour City, 54321</p>
-                <p>Phone: (123) 456-7890</p>
-                <p>Email: info@gadissalon.com</p>
-            </div>
-            <div class="footer-links">
-                <h3>Quick Links</h3>
-                <ul>
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="services.html">Services</a></li>
-                    <li><a href="gallery.html">Gallery</a></li>
-                    <li><a href="about.html">About</a></li>
-                    <li><a href="contact.html">Contact Us</a></li>
-                </ul>
-            </div>
-            <div class="footer-social">
-                <h3>Follow Us</h3>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=F" alt="Facebook"></a>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=I" alt="Instagram"></a>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=T" alt="Twitter"></a>
-            </div>
+      <div class="service-list">
+        <div class="service-card">
+          <img src="https://placehold.co/400x250/D67A84/FFFFFF?text=Hair+Styling" alt="Hair Styling">
+          <h2>Hair Styling</h2>
+          <p>Trendy cuts, coloring, blowouts, and treatments. Let our experts give you a look you’ll love.</p>
+          <button class="book-btn">Book Now</button>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
+
+        <div class="service-card">
+          <img src="https://placehold.co/400x250/F4DCD6/333333?text=Makeup+%26+Beauty" alt="Makeup & Beauty">
+          <h2>Makeup & Beauty</h2>
+          <p>From everyday looks to event makeup, our team ensures you look flawless for every occasion.</p>
+          <button class="book-btn">Book Now</button>
         </div>
-    </footer>
+
+        <div class="service-card">
+          <img src="https://placehold.co/400x250/E9B8B8/FFFFFF?text=Spa+Treatments" alt="Spa Treatments">
+          <h2>Spa Treatments</h2>
+          <p>Relax and unwind with our rejuvenating facials, massages, and body care services.</p>
+          <button class="book-btn">Book Now</button>
+        </div>
+
+        <div class="service-card">
+          <img src="https://placehold.co/400x250/F3C8D0/333333?text=Nail+Care" alt="Nail Care">
+          <h2>Nail Care</h2>
+          <p>Enjoy manicures, pedicures, and nail art that make every detail shine.</p>
+          <button class="book-btn">Book Now</button>
+        </div>
+
+        <div class="service-card">
+          <img src="https://placehold.co/400x250/D8A7A7/FFFFFF?text=Hair+Care+Products" alt="Hair Products">
+          <h2>Hair Care Products</h2>
+          <p>Shop premium hair products trusted by our stylists for healthy, shiny results.</p>
+          <button class="book-btn">Shop Now</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-info">
+        <h3>Gadis Salon</h3>
+        <p>123 Beauty Lane, Glamour City, 54321</p>
+        <p>Phone: (123) 456-7890</p>
+        <p>Email: info@gadissalon.com</p>
+      </div>
+
+      <div class="footer-links">
+        <h3>Quick Links</h3>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="services.html">Services</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="index.html#contact">Contact Us</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-social">
+        <h3>Follow Us</h3>
+        <a href="#"><i class="fab fa-whatsapp"></i></a>
+        <a href="#"><i class="fab fa-facebook"></i></a>
+        <a href="#"><i class="fab fa-instagram"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+  <script>
+    document.querySelectorAll(".book-btn").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.preventDefault();
+        const loggedIn = localStorage.getItem("userLoggedIn") === "true";
+        if (!loggedIn) {
+          window.location.href = "login.html";
+        } else {
+          window.location.href = "contact.html";
+        }
+      });
+    });
+  </script>
 </body>
-<script type="module" src="js/main.js"></script>
 </html>

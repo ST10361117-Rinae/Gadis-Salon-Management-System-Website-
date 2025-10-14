@@ -10,28 +10,63 @@
 
 <body>
     <header class="navbar">
-    <a href="index.html" class="logo">Gadis Salon</a>
-    <nav class="navbar-links">
-        <a href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact Us</a>
-        
-        <a href="login.html" id="login-link">Login</a> 
-        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
-        <a href="#" id="logout-button" style="display: none;">Logout</a>
-    </nav>
-</header>
+        <a href="index.html" class="logo">Gadis Salon</a>
+        <nav class="navbar-links">
+            <a href="index.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="about.html" class="active">About</a>
+            <a href="index.html#contact">Contact Us</a>
+
+            <!-- Icons -->
+            <a href="#" class="icon-link"><img src="https://placehold.co/28x28/D67A84/FFF?text=❤" alt="Favorite"></a>
+            <a href="#" class="icon-link"><img src="https://placehold.co/28x28/D67A84/FFF?text=🛒" alt="Cart"></a>
+            <a href="profile.html" class="icon-link"><img src="https://placehold.co/28x28/D67A84/FFF?text=P" alt="Profile"></a>
+
+            <a href="login.html" id="login-link">Login</a>
+            <a href="profile.html" id="profile-link" style="display:none;">Profile</a>
+            <a href="#" id="logout-button" style="display:none;">Logout</a>
+        </nav>
+    </header>
 
     <main>
-        <section class="content-section container">
-            <h1>About Gadis Salon</h1>
-            <div class="about-content">
+        <section class="about-hero">
+            <div class="about-hero-text">
+                <h1>About <span>Gadis Salon</span></h1>
+                <p>Bringing beauty, confidence, and self-expression to everyone who walks through our doors.</p>
+            </div>
+        </section>
+
+        <section class="content-section container fade-in-up">
+            <div class="about-layout">
+                <div class="about-image">
+                    <img src="https://placehold.co/600x400/D67A84/FFF?text=Our+Team" alt="Gadis Salon Team">
+                </div>
                 <div class="about-text">
-                    <p>Gadis Salon was founded with a passion for beauty and a commitment to exceptional client experience.</p>
-                    <p>Our skilled stylists stay on top of the latest trends to deliver top-quality service tailored to your needs.</p>
-                    <p>Thank you for choosing Gadis Salon. We can't wait to make your beauty vision a reality.</p>
+                    <h2>Our Story</h2>
+                    <p>Gadis Salon was founded with a passion for beauty and a commitment to creating a space where clients feel relaxed, confident, and valued. Our talented stylists and beauty experts bring creativity, precision, and care to every appointment.</p>
+                    <p>We take pride in using top-quality products and keeping up with the latest trends in hair, makeup, and skincare. From the moment you enter, our team ensures that every detail contributes to your ultimate salon experience.</p>
+                    <p>Thank you for choosing Gadis Salon — where beauty meets artistry and self-care becomes an experience.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-values fade-in-up">
+            <h2>Our Values</h2>
+            <div class="values-grid">
+                <div class="value-card">
+                    <img src="https://placehold.co/120x120/D67A84/FFF?text=🌸" alt="Excellence">
+                    <h3>Excellence</h3>
+                    <p>We deliver the highest quality in everything we do, from our services to our customer care.</p>
+                </div>
+                <div class="value-card">
+                    <img src="https://placehold.co/120x120/D67A84/FFF?text=💖" alt="Care">
+                    <h3>Care</h3>
+                    <p>Your comfort and satisfaction are at the heart of everything we do at Gadis Salon.</p>
+                </div>
+                <div class="value-card">
+                    <img src="https://placehold.co/120x120/D67A84/FFF?text=✨" alt="Innovation">
+                    <h3>Innovation</h3>
+                    <p>We stay ahead of beauty trends to bring you modern styles and new inspirations.</p>
                 </div>
             </div>
         </section>
@@ -50,22 +85,22 @@
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="services.html">Services</a></li>
-                    <li><a href="gallery.html">Gallery</a></li>
                     <li><a href="about.html">About</a></li>
-                    <li><a href="contact.html">Contact Us</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
                 </ul>
             </div>
             <div class="footer-social">
                 <h3>Follow Us</h3>
                 <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=F" alt="Facebook"></a>
                 <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=I" alt="Instagram"></a>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=T" alt="Twitter"></a>
+                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=W" alt="WhatsApp"></a>
             </div>
         </div>
         <div class="footer-bottom">
             <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
         </div>
     </footer>
+
+    <script type="module" src="js/main.js"></script>
 </body>
-<script type="module" src="js/main.js"></script>
 </html>

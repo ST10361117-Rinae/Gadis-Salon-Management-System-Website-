@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,61 +8,113 @@
 </head>
 
 <body>
-   <header class="navbar">
+<header class="navbar">
     <a href="index.html" class="logo">Gadis Salon</a>
     <nav class="navbar-links">
-        <a href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
+        <a href="#home">Home</a>
+        <a href="#services">Services</a>
+        <a href="#contact">Contact Us</a>
         <a href="about.html">About</a>
-        <a href="contact.html">Contact Us</a>
-        
-        <a href="login.html" id="login-link">Login</a> 
-        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
-        <a href="#" id="logout-button" style="display: none;">Logout</a>
+
+
+        <!-- New icons: Favorite, Cart, Profile -->
+        <a href="#" class="icon-link"><img src="https://placehold.co/28x28/D67A84/FFF?text=❤" alt="Favorite"></a>
+        <a href="#" class="icon-link"><img src="https://placehold.co/28x28/D67A84/FFF?text=🛒" alt="Cart"></a>
+        <a href="profile.html" class="icon-link"><img src="https://placehold.co/28x28/D67A84/FFF?text=P" alt="Profile"></a>
+
+        <a href="login.html" id="login-link">Login</a>
+        <a href="profile.html" id="profile-link" style="display:none;">Profile</a>
+        <a href="#" id="logout-button" style="display:none;">Logout</a>
     </nav>
 </header>
 
-    <main>
-        <section class="hero-section">
-            <h1>Welcome to <span>Gadis Salon</span></h1>
-            <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
-            <div class="cta-buttons">
-                <a href="contact.html" class="book-btn">Book an Appointment</a>
-                <a href="#" class="shop-btn">Shop Our Products</a>
-            </div>
-        </section>
-    </main>
+<main id="home">
+    <!-- HERO SECTION -->
+    <section class="hero-section">
+        <h1>Welcome to <span>Gadis Salon</span></h1>
+        <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
+        <div class="cta-buttons">
+            <a href="#services" class="book-btn">View Our Services</a>
+            <a href="#contact" class="shop-btn">Book Appointment</a>
+        </div>
+    </section>
 
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-info">
-                <h3>Gadis Salon</h3>
-                <p>123 Beauty Lane, Glamour City, 54321</p>
-                <p>Phone: (123) 456-7890</p>
-                <p>Email: info@gadissalon.com</p>
+    <!-- SERVICES SECTION -->
+    <section id="services" class="content-section container fade-in-up">
+        <h2 class="section-title">Our Services</h2>
+        <div class="service-grid">
+            <div class="service-card">
+                <img src="https://placehold.co/500x300/D67A84/FFF?text=Hair+Styling" alt="Hair Styling">
+                <h3>Hair Styles</h3>
+                <p>Beautiful color, and professional care for your hair.</p>
             </div>
-            <div class="footer-links">
-                <h3>Quick Links</h3>
-                <ul>
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="services.html">Services</a></li>
-                    <li><a href="gallery.html">Gallery</a></li>
-                    <li><a href="about.html">About</a></li>
-                    <li><a href="contact.html">Contact Us</a></li>
-                </ul>
+            <div class="service-card">
+                <img src="https://placehold.co/500x300/F4DCD6/333?text=Products" alt="Products">
+                <h3>products</h3>
+                <p>Affordable prices</p>
             </div>
-            <div class="footer-social">
-                <h3>Follow Us</h3>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=F" alt="Facebook"></a>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=I" alt="Instagram"></a>
-                <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=T" alt="Twitter"></a>
-            </div>
+
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
+    </section>
+
+    <!-- CONTACT SECTION -->
+    <section id="contact" class="content-section container fade-in-up">
+        <h2 class="section-title">Contact Us</h2>
+        <div class="contact-layout">
+            <div class="contact-info">
+                <p><strong>Address:</strong> 123 Beauty Lane, Glamour City, 54321</p>
+                <p><strong>Phone:</strong> (123) 456-7890</p>
+                <p><strong>Email:</strong> info@gadissalon.com</p>
+            </div>
+            <form class="contact-form">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea required></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Send Message</button>
+            </form>
         </div>
-    </footer>
-</body>
+    </section>
+</main>
+
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-info">
+            <h3>Gadis Salon</h3>
+            <p>123 Beauty Lane, Glamour City, 54321</p>
+            <p>Phone: (123) 456-7890</p>
+            <p>Email: info@gadissalon.com</p>
+        </div>
+        <div class="footer-links">
+            <h3>Quick Links</h3>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="about.html">About</a></li>
+
+            </ul>
+        </div>
+        <div class="footer-social">
+            <h3>Follow Us</h3>
+            <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=F" alt="Facebook"></a>
+            <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=I" alt="Instagram"></a>
+            <a href="#"><img src="https://placehold.co/32x32/D67A84/FFFFFF?text=W" alt="WhatsApp"></a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
+    </div>
+</footer>
+
 <script type="module" src="js/main.js"></script>
+</body>
 </html>

@@ -5,7 +5,7 @@
 
 // Import Firebase functions and your config
 import { auth, db, storage } from './firebase-config.js';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs, FieldValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs, FieldValue ,  arrayUnion} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
@@ -228,8 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Found ${querySnapshot.size} pending booking(s) in total. Checking each one...`);
 
             const promises = querySnapshot.docs.map(async (bookingDoc) => {
-               
                 const booking = { ...bookingDoc.data(), id: bookingDoc.id };
+
+                const isDeclinedByCurrentUser = booking.declinedBy && booking.declinedBy.includes(stylistId);
+                if (isDeclinedByCurrentUser) {
+                    return null; // Skip this booking entirely
+                }
                 
                 const hairstyleDocRef = doc(db, "hairstyles", booking.hairstyleId);
                 const hairstyleDoc = await getDoc(hairstyleDocRef);
@@ -619,43 +623,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (target.matches('.action-btn.decline')) {
-            // 1. Ask the stylist for a reason using a prompt.
-            const reason = prompt("Please provide a reason for declining this booking:");
+            const bookingRef = doc(db, "bookings", bookingId);
+            const bookingDoc = await getDoc(bookingRef);
+            const bookingData = bookingDoc.data();
 
-            // 2. Only proceed if the stylist entered a reason.
-            if (reason) { 
-                const bookingRef = doc(db, "bookings", bookingId);
-                try {
-                    // 3. Update the booking with the new status and the reason.
+            // --- NEW LOGIC: Check if it's an "Any Available" booking ---
+            if (bookingData.stylistName === "Any Available") {
+                // If so, just add the stylist's ID to the 'declinedBy' array
+                await updateDoc(bookingRef, {
+                    declinedBy: arrayUnion(currentStylistId) // arrayUnion is a special Firebase function
+                });
+                alert('Booking declined. It will remain available for other stylists.');
+            } else {
+                // Otherwise, use the old logic for directly assigned bookings
+                const reason = prompt("Please provide a reason for declining this booking:");
+                if (reason) { 
                     await updateDoc(bookingRef, {
                         status: "Declined",
                         cancellationReason: reason
                     });
                     alert('Booking declined.');
-                } catch (error) {
-                    console.error("Error declining booking: ", error);
-                    alert("Failed to decline booking. Please try again.");
                 }
             }
             // If the user clicks "Cancel" on the prompt, nothing happens.
+            
         }
-
-            /*
-            if (target.matches('.mark-ready')) {
-                if (confirm('Mark this order as "Ready for Pickup"?')) {
-                    const orderRef = doc(db, "product_orders", orderId);
-                    await updateDoc(orderRef, { status: "Ready for Pickup" });
-                    alert("Order status updated!");
-                }
-            }
-            if (target.matches('.mark-collected')) {
-                if (confirm('Mark this order as "Completed"?')) {
-                    const orderRef = doc(db, "product_orders", orderId);
-                    await updateDoc(orderRef, { status: "Completed" });
-                    alert("Order marked as complete!");
-                }
-            }
-                */
+    
         }
     });
 

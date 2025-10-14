@@ -1905,3 +1905,18 @@ thead th.sorted i {
     white-space: nowrap;
 }
 /* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR SUPPORT TICKET HEADER --- */
+.ticket-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.ticket-view-header .btn-danger {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9em;
+}
+/* --- END OF NEW SECTION --- */
+
+

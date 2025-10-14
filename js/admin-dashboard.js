@@ -855,7 +855,15 @@ document.addEventListener('DOMContentLoaded', () => {
             snapshot.forEach(messageDoc => {
                 const message = messageDoc.data();
                 const bubbleClass = message.senderUid === booking.customerId ? 'customer' : 'stylist';
-                messagesHtml += `<div class="chat-bubble ${bubbleClass}">${message.messageText}</div>`;
+                messagesHtml += `
+                    <div class="chat-bubble ${bubbleClass}">
+                        <div class="chat-sender-name">${message.senderName}</div>
+                        <span class="message-text">${message.messageText}</span>
+                        <div class="chat-footer">
+                            <span class="chat-timestamp">${formatTimestamp(message.timestamp)}</span>
+                        </div>
+                    </div>
+                `;
             });
             bookingModalChatMessages.innerHTML = messagesHtml;
             bookingModalChatMessages.scrollTop = bookingModalChatMessages.scrollHeight;

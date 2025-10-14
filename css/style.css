@@ -1867,3 +1867,41 @@ thead th.sorted i {
     align-items: flex-end; /* Align own messages to the right */
 }
 /* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR CHAT SENDER NAMES & FOOTERS --- */
+.chat-bubble {
+    /* Update the bubble to use flexbox for better content alignment */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Default alignment for customer messages */
+}
+
+.chat-bubble.admin {
+    align-items: flex-end; /* Align admin's own messages to the right */
+}
+
+.chat-sender-name {
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: 4px;
+    opacity: 0.8;
+}
+
+/* Give the customer's name a different color to stand out on the light background */
+.chat-bubble.customer .chat-sender-name {
+    color: var(--muted);
+}
+
+.chat-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 4px;
+}
+
+.chat-timestamp {
+    font-size: 0.75em;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+/* --- END OF NEW SECTION --- */

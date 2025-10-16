@@ -6,8 +6,11 @@
     <title>Gadis Salon - Welcome</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
     <link rel="stylesheet" href="css/style.css">
+    <!-- Font Awesome for Icons -->
+    <script src="https://kit.fontawesome.com/4d6ab489c8.js" crossorigin="anonymous"></script>
 </head>
 <body>
+   <!-- Main Navbar -->
     <header class="navbar transparent" id="navbar">
         <a href="#home" class="logo">Gadis Salon</a>
         <nav class="navbar-links">
@@ -16,28 +19,24 @@
             <a href="#shop">Shop</a>
             <a href="#about">About</a>
             <a href="#contact">Contact</a>
-            
-            <a href="login.html" id="login-link">Login</a> 
-            <a href="#" id="profile-link" style="display: none;">Profile</a>
-            <a href="#" id="logout-button" style="display: none;">Logout</a>
         </nav>
-        <button class="hamburger-menu" id="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+        <div class="navbar-icons">
+            <a href="#" id="fav-button"><i class="fas fa-heart"></i></a>
+            <a href="#" id="cart-button"><i class="fas fa-shopping-cart"></i><span id="cart-badge" class="badge">0</span></a>
+            <a href="#" id="profile-button"><i class="fas fa-user"></i></a>
+            <button class="hamburger-menu" id="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+        </div>
     </header>
 
-    <!-- ADDED Mobile Navigation Menu (hidden by default) -->
-    <div class="mobile-nav" id="mobile-nav">
-        <a href="#home" class="mobile-nav-link">Home</a>
-        <a href="#services" class="mobile-nav-link">Services</a>
-        <a href="#shop" class="mobile-nav-link">Shop</a>
-        <a href="#about" class="mobile-nav-link">About</a>
-        <a href="#contact" class="mobile-nav-link">Contact</a>
+     <div class="mobile-nav" id="mobile-nav">
+        <!-- Links will be added by JS -->
     </div>
 
     <main>
         <!-- RESTRUCTURED Hero Section for Multi-Layer Parallax -->
         <section id="home" class="hero-parallax">
             <div class="parallax-bg" id="parallax-bg" style="background-image: url('https://images.pexels.com/photos/3992870/pexels-photo-3992870.jpeg');"></div>
-            <img src="images/model-foreground.png" alt="Model" class="parallax-fg" id="parallax-fg" onerror="this.style.display='none'">
+            <img src="images/model-foreground.jpg" alt="Model" class="parallax-fg" id="parallax-fg" onerror="this.style.display='none'">
             <div class="hero-content fade-in-up">
                 <h1>Welcome to <span>Gadis Salon</span></h1>
                 <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
@@ -46,19 +45,17 @@
         </section>
 
         <!-- Section 2: Services (Hairstyles) -->
-        <section id="services" class="content-section container">
+       <section id="services" class="content-section container">
             <h2>Our Signature Hairstyles</h2>
-            <div id="hairstyles-grid" class="product-grid">
-                <!-- Hairstyle cards will be loaded here by JS -->
-            </div>
+            <div id="hairstyles-grid" class="product-grid"></div>
+            <div class="view-all-container"><a href="#" id="view-all-hairstyles" class="view-all-btn">View All Hairstyles</a></div>
         </section>
 
         <!-- Section 3: Shop (Products) -->
-        <section id="shop" class="content-section container">
+         <section id="shop" class="content-section container">
             <h2>Featured Products</h2>
-            <div id="products-grid" class="product-grid">
-                <!-- Product cards will be loaded here by JS -->
-            </div>
+            <div id="products-grid" class="product-grid"></div>
+            <div class="view-all-container"><a href="#" id="view-all-products" class="view-all-btn">View All Products</a></div>
         </section>
 
         <!-- Section 4: About -->
@@ -104,9 +101,34 @@
             <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
         </div>
     </footer>
-    <script src="https://kit.fontawesome.com/4d6ab489c8.js" crossorigin="anonymous"></script>
-    <script type="module" src="js/main.js"></script>
-    <script type="module" src="js/home.js"></script> <!-- A new, dedicated script for the homepage -->
-</body>
-</html>
+    <!-- MODALS (All hidden by default) -->
 
+        <!-- Cart Modal/Off-canvas -->
+        <div id="cart-modal" class="off-canvas">
+            <div class="off-canvas-header">
+                <h2>Your Cart</h2>
+                <button id="close-cart-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="cart-items-container" class="off-canvas-body"></div>
+            <div class="off-canvas-footer">
+                <div class="cart-total">
+                    <span>Total:</span>
+                    <span id="cart-total-price">R0.00</span>
+                </div>
+                <button id="checkout-btn" class="btn">Proceed to Checkout</button>
+            </div>
+        </div>
+
+        <!-- Generic Detail Modal for Products & Hairstyles -->
+        <div id="detail-modal-overlay" class="modal-overlay">
+            <div class="modal product-detail-modal">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+        
+        <div class="modal-backdrop"></div>
+
+        <script type="module" src="js/main.js"></script>
+        <script type="module" src="js/home.js"></script>
+    </body>
+</html>

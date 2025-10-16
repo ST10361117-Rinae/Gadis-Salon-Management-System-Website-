@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gadis Salon - Welcome</title>
-    <link rel="icon" type="image/png" href="images/favicon.png">
-    <link rel="stylesheet" href="css/style.css">
+    <!-- Favicon using a placeholder for consistency -->
+    <link rel="icon" type="image/png" href="/images/favicon.png">
     <!-- Font Awesome for Icons -->
     <script src="https://kit.fontawesome.com/4d6ab489c8.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/css/home.css">
 </head>
 <body>
-   <!-- Main Navbar -->
+    <!-- Main Navbar -->
     <header class="navbar transparent" id="navbar">
-        <a href="#home" class="logo">Gadis Salon</a>
+        <a href="index.html" class="logo">Gadis Salon</a>
         <nav class="navbar-links">
             <a href="#home">Home</a>
             <a href="#services">Services</a>
@@ -21,54 +22,74 @@
             <a href="#contact">Contact</a>
         </nav>
         <div class="navbar-icons">
-            <a href="#" id="fav-button"><i class="fas fa-heart"></i></a>
-            <a href="#" id="cart-button"><i class="fas fa-shopping-cart"></i><span id="cart-badge" class="badge">0</span></a>
-            <a href="#" id="profile-button"><i class="fas fa-user"></i></a>
+            <a href="#" id="fav-button" title="Favorites"><i class="fas fa-heart"></i></a>
+            <a href="#" id="cart-button" title="Cart"><i class="fas fa-shopping-cart"></i><span id="cart-badge" class="badge" style="display: none;">0</span></a>
+            <div class="profile-menu-container">
+                <a href="#" id="profile-button" title="Profile"><i class="fas fa-user"></i></a>
+                <div id="profile-dropdown" class="profile-dropdown">
+                    <div id="auth-links">
+                        <a href="login.html">Login</a>
+                        <a href="register.html">Register</a>
+                    </div>
+                    <div id="user-links" style="display: none;">
+                        <a href="#" id="my-bookings-link">My Bookings</a>
+                        <a href="#" id="my-orders-link">My Orders</a>
+                        <a href="#" id="edit-profile-link">Edit Profile</a>
+                        <a href="#" id="logout-button">Logout</a>
+                    </div>
+                    <div class="theme-switcher">
+                        <span>Dark Mode</span>
+                        <label class="switch">
+                            <input type="checkbox" id="theme-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             <button class="hamburger-menu" id="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
         </div>
     </header>
 
-     <div class="mobile-nav" id="mobile-nav">
-        <!-- Links will be added by JS -->
+    <div class="mobile-nav" id="mobile-nav">
+        <!-- Mobile links will be populated by JS -->
     </div>
 
     <main>
-        <!-- RESTRUCTURED Hero Section for Multi-Layer Parallax -->
         <section id="home" class="hero-parallax">
-            <div class="parallax-bg" id="parallax-bg" style="background-image: url('https://images.pexels.com/photos/3992870/pexels-photo-3992870.jpeg');"></div>
-            <img src="images/model-foreground.jpg" alt="Model" class="parallax-fg" id="parallax-fg" onerror="this.style.display='none'">
-            <div class="hero-content fade-in-up">
-                <h1>Welcome to <span>Gadis Salon</span></h1>
-                <p>Experience the art of beauty. From stunning hairstyles to premium products, we are here to help you look and feel your best.</p>
+            <div class="parallax-bg" id="parallax-bg" style="background-image: url('images/bg.jpg');"></div>
+            
+            <h1 class="parallax-text parallax-text-back" id="parallax-text-back">GADIS SALON</h1>
+            
+            <img src="images/model-foreground17.png" alt="Model" class="parallax-fg" id="parallax-fg">
+            
+            <h1 class="parallax-text parallax-text-front" id="parallax-text-front">GADIS SALON</h1>
+
+            <div class="hero-content fade-in-up" id="hero-content">
+                <p>Experience the art of beauty and radiant locks.</p>
                 <a href="#services" class="book-btn">Explore Our Services</a>
             </div>
         </section>
-
-        <!-- Section 2: Services (Hairstyles) -->
-       <section id="services" class="content-section container">
+        
+        <section id="services" class="content-section container">
             <h2>Our Signature Hairstyles</h2>
             <div id="hairstyles-grid" class="product-grid"></div>
             <div class="view-all-container"><a href="#" id="view-all-hairstyles" class="view-all-btn">View All Hairstyles</a></div>
         </section>
 
-        <!-- Section 3: Shop (Products) -->
-         <section id="shop" class="content-section container">
+        <section id="shop" class="content-section container">
             <h2>Featured Products</h2>
             <div id="products-grid" class="product-grid"></div>
             <div class="view-all-container"><a href="#" id="view-all-products" class="view-all-btn">View All Products</a></div>
         </section>
 
-        <!-- Section 4: About -->
         <section id="about" class="content-section container">
-             <h2>About Us</h2>
-             <p>Gadis Salon was founded with a passion for beauty and a commitment to exceptional client experience. Our skilled stylists stay on top of the latest trends to deliver top-quality service tailored to your needs.</p>
+            <h2>About Us</h2>
+            <p>Gadis Salon was founded with a passion for beauty and a commitment to an exceptional client experience. Our skilled stylists stay on top of the latest trends to deliver top-quality service tailored to your needs.</p>
         </section>
 
-        <!-- Section 5: Contact -->
         <section id="contact" class="content-section container">
-             <h2>Contact Us</h2>
-             <!-- You can add your existing contact form here later -->
-             <p>Get in touch with us for bookings and inquiries.</p>
+            <h2>Contact Us</h2>
+            <p>Get in touch with us for bookings and inquiries. We'd love to hear from you!</p>
         </section>
     </main>
 
@@ -83,11 +104,11 @@
             <div class="footer-links">
                 <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="services.html">Services</a></li>
-                    <li><a href="gallery.html">Gallery</a></li>
-                    <li><a href="about.html">About</a></li>
-                    <li><a href="contact.html">Contact Us</a></li>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#shop">Shop</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#contact">Contact</a></li>
                 </ul>
             </div>
             <div class="footer-social">
@@ -101,34 +122,80 @@
             <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
         </div>
     </footer>
-    <!-- MODALS (All hidden by default) -->
 
-        <!-- Cart Modal/Off-canvas -->
-        <div id="cart-modal" class="off-canvas">
-            <div class="off-canvas-header">
-                <h2>Your Cart</h2>
-                <button id="close-cart-btn" class="close-btn">&times;</button>
-            </div>
-            <div id="cart-items-container" class="off-canvas-body"></div>
-            <div class="off-canvas-footer">
-                <div class="cart-total">
-                    <span>Total:</span>
-                    <span id="cart-total-price">R0.00</span>
-                </div>
-                <button id="checkout-btn" class="btn">Proceed to Checkout</button>
-            </div>
+    <div class="modal-backdrop"></div>
+
+    <!-- MODALS AND OFF-CANVAS PANELS -->
+    <div id="cart-modal" class="off-canvas">
+        <div class="off-canvas-header">
+            <h2>Your Cart</h2><button id="close-cart-btn" class="close-btn">&times;</button>
         </div>
-
-        <!-- Generic Detail Modal for Products & Hairstyles -->
-        <div id="detail-modal-overlay" class="modal-overlay">
-            <div class="modal product-detail-modal">
-                <!-- Content will be injected by JS -->
-            </div>
+        <div id="cart-items-container" class="off-canvas-body"></div>
+        <div class="off-canvas-footer">
+            <div class="cart-total"><span>Total:</span><span id="cart-total-price">R0.00</span></div>
+            <button id="checkout-btn" class="book-btn">Proceed to Checkout</button>
         </div>
-        
-        <div class="modal-backdrop"></div>
+    </div>
 
-        <script type="module" src="js/main.js"></script>
-        <script type="module" src="js/home.js"></script>
-    </body>
+    <div id="favorites-modal" class="off-canvas">
+        <div class="off-canvas-header">
+            <h2>Your Favorites</h2><button id="close-favorites-btn" class="close-btn">&times;</button>
+        </div>
+        <div id="favorites-items-container" class="off-canvas-body"></div>
+    </div>
+    
+    <div id="booking-modal" class="off-canvas">
+        <div class="off-canvas-header">
+             <h2>Book Appointment</h2>
+             <button id="booking-modal-close-btn" class="close-btn">&times;</button>
+        </div>
+        <div id="booking-modal-body" class="off-canvas-body">
+            <!-- Booking steps will be injected by JS -->
+        </div>
+    </div>
+
+    <div id="detail-modal-overlay" class="modal-overlay">
+        <div class="modal">
+             <!-- Detail modal content will be injected by JS -->
+        </div>
+    </div>
+
+    <!-- NEW: My Bookings Panel -->
+    <div id="my-bookings-panel" class="off-canvas">
+        <div class="off-canvas-header"><h2>My Bookings</h2><button class="close-panel-btn">&times;</button></div>
+        <div id="my-bookings-container" class="off-canvas-body"></div>
+    </div>
+
+    <!-- NEW: My Orders Panel -->
+    <div id="my-orders-panel" class="off-canvas">
+        <div class="off-canvas-header"><h2>My Orders</h2><button class="close-panel-btn">&times;</button></div>
+        <div id="my-orders-container" class="off-canvas-body"></div>
+    </div>
+    
+    <!-- NEW: Notifications Panel -->
+    <div id="notifications-panel" class="off-canvas">
+         <div class="off-canvas-header"><h2>Notifications</h2><button class="close-panel-btn">&times;</button></div>
+         <div id="notifications-container" class="off-canvas-body"></div>
+    </div>
+    
+    <!-- NEW: Booking Detail & Chat Modal -->
+    <div id="booking-detail-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header"><h2>Booking Details</h2><button class="close-panel-btn">&times;</button></div>
+            <div id="booking-detail-body" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- NEW: Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal-overlay">
+        <!-- Content injected by JS -->
+    </div>
+
+    <!-- NEW: Contact Support Modal -->
+    <div id="contact-modal" class="modal-overlay">
+        <!-- Content injected by JS -->
+    </div>
+
+</body>
+<script type="module" src="js/home.js"></script>
 </html>

@@ -1,8 +1,9 @@
 // --- 1. FIREBASE SETUP & MODULE IMPORTS ---
-import { auth, db, functions } from './firebase-config.js';
-import { collection, onSnapshot, query, where, doc, getDoc, updateDoc, setDoc, deleteDoc, addDoc, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { auth, db, functions, storage } from './firebase-config.js';
+import { collection, onSnapshot, query, limit, doc, getDoc, updateDoc, setDoc, deleteDoc, addDoc, serverTimestamp, where, orderBy, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
 // --- 2. MAIN APPLICATION LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBookingBtn = document.getElementById('booking-modal-close-btn');
     const profileButton = document.getElementById('profile-button');
     const profileDropdown = document.getElementById('profile-dropdown');
+    const notificationsButton = document.getElementById('notifications-button');
+    const notificationsBadge = document.getElementById('notifications-badge');
     const myBookingsLink = document.getElementById('my-bookings-link');
     const myOrdersLink = document.getElementById('my-orders-link');
     const editProfileLink = document.getElementById('edit-profile-link');
@@ -57,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2.1. AUTHENTICATION & CORE UI ---
     onAuthStateChanged(auth, user => {
+        console.log("Auth state changed. User:", user ? user.uid : "Logged Out");
         currentUser = user;
         updateUIAfterAuthStateChange();
         if (user) {
@@ -65,18 +69,22 @@ document.addEventListener('DOMContentLoaded', () => {
             listenForMyBookings(user.uid);
             listenForMyOrders(user.uid);
             listenForNotifications(user.uid);
-            
-            // Make user-specific links work
             editProfileLink.href = `#edit-profile/${user.uid}`;
         } else {
-            // Clear all user data on logout
             renderCart([]); renderFavorites([]); renderMyBookings([]); renderMyOrders([]); renderNotifications([]);
         }
     });
 
+    // Event listeners for profile dropdown links
     myBookingsLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(myBookingsPanel, true); });
     myOrdersLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(myOrdersPanel, true); });
     editProfileLink.addEventListener('click', (e) => { e.preventDefault(); openEditProfileModal(); });
+    notificationsButton.addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        toggleOffCanvas(notificationsPanel, true);
+        // NEW: Mark notifications as read when the panel is opened.
+        markNotificationsAsRead();
+    });
     document.querySelector('a[href="#contact"]').addEventListener('click', (e) => { e.preventDefault(); openContactModal(); });
 
 
@@ -192,13 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2.4. MODAL & OFF-CANVAS LOGIC ---
     function toggleOffCanvas(modal, show) {
+        if (!modal) return; // Add a check to prevent errors if the modal element doesn't exist
         modalBackdrop.style.display = show ? 'block' : 'none';
-        if (show) {
-            document.querySelectorAll('.off-canvas.open').forEach(m => m.classList.remove('open'));
-            modal.classList.add('open');
-        } else {
-            modal.classList.remove('open');
-        }
+        modal.classList.toggle('open', show);
         document.body.style.overflow = show ? 'hidden' : '';
     }
 
@@ -218,11 +222,22 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleOffCanvas(cartModal, false);
         toggleOffCanvas(favoritesModal, false);
         toggleOffCanvas(bookingModal, false);
+        toggleOffCanvas(notificationsPanel, false);
         toggleDetailModal(false);
+        if (editProfileModal) editProfileModal.style.display = 'none';
+        if (contactModal) contactModal.style.display = 'none';
+        if (bookingDetailModal) bookingDetailModal.style.display = 'none';
     });
 
     // --- 2.5. EVENT DELEGATION & MODAL RENDERING ---
     document.body.addEventListener('click', async (e) => {
+        if (e.target.matches('.close-panel-btn, .close-panel-btn *')) {
+            const panelToClose = e.target.closest('.off-canvas, .modal-overlay');
+            if (panelToClose) {
+                modalBackdrop.click(); // Trigger the generic close logic
+            }
+        }
+        
         const card = e.target.closest('.product-card:not(.sold-out)');
         if (card) {
             const itemId = card.dataset.id;
@@ -349,26 +364,44 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateCartQuantity(productId, size, action) {
         if (!currentUser) return;
         const userRef = doc(db, 'users', currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return;
-        const cart = userSnap.data().cart || [];
-        const itemIndex = cart.findIndex(item => item.productId === productId && item.size === size);
-        if (itemIndex > -1) {
-            if (action === 'increase') cart[itemIndex].quantity++;
-            else if (action === 'decrease') cart[itemIndex].quantity--;
-            if (cart[itemIndex].quantity <= 0) cart.splice(itemIndex, 1);
-            await updateDoc(userRef, { cart });
+        try {
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) { console.error("User doc not found"); return; }
+            
+            const cart = userSnap.data().cart || [];
+            const itemIndex = cart.findIndex(item => item.productId === productId && item.size === size);
+
+            if (itemIndex > -1) {
+                if (action === 'increase') {
+                    cart[itemIndex].quantity++;
+                } else if (action === 'decrease') {
+                    cart[itemIndex].quantity--;
+                }
+
+                if (cart[itemIndex].quantity <= 0) {
+                    cart.splice(itemIndex, 1);
+                }
+                await updateDoc(userRef, { cart: cart });
+            }
+        } catch (error) {
+            console.error("Error updating cart quantity:", error);
         }
     }
 
     async function removeFromCart(productId, size) {
         if (!currentUser) return;
         const userRef = doc(db, 'users', currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return;
-        const cart = userSnap.data().cart || [];
-        const updatedCart = cart.filter(item => !(item.productId === productId && item.size === size));
-        await updateDoc(userRef, { cart: updatedCart });
+        try {
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) { console.error("User doc not found"); return; }
+            
+            const cart = userSnap.data().cart || [];
+            const updatedCart = cart.filter(item => !(item.productId === productId && item.size === size));
+            
+            await updateDoc(userRef, { cart: updatedCart });
+        } catch (error) {
+            console.error("Error removing from cart:", error);
+        }
     }
 
     function listenForFavoritesUpdates(uid) {
@@ -549,7 +582,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCalendar() {
-        // ... (Header and day name logic remains the same)
         const dateGrid = document.getElementById('date-grid');
         const monthYearEl = document.getElementById('current-month-year');
         const month = currentDate.getMonth();
@@ -567,8 +599,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(year, month, i);
-            // --- THIS IS THE DATE FIX ---
-            // Create the date string manually to avoid UTC conversion issues from toISOString()
             const yearStr = date.getFullYear();
             const monthStr = (date.getMonth() + 1).toString().padStart(2, '0');
             const dayStr = date.getDate().toString().padStart(2, '0');
@@ -593,16 +623,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         timeSlotGrid.innerHTML = '<p>Loading times...</p>';
         
-        // --- THIS IS THE DATE FIX #2 ---
-        // Create date object correctly to avoid timezone shift before formatting
-        const parts = selectedBooking.date.split('-');
-        const dateObj = new Date(parts[0], parts[1] - 1, parts[2]); 
-        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ', ');
-        console.log(`Fetching slots for date string: "${formattedDate}" (from selected date: ${selectedBooking.date})`);
+        // FIX: Reverted date formatting. We will now send the clean 'YYYY-MM-DD' date string 
+        // directly to the Firebase Function. This matches the format the Android app will now use.
+        const dateToSend = selectedBooking.date;
+        console.log(`Fetching slots for date string: "${dateToSend}"`);
 
         const getAvailableSlots = httpsCallable(functions, 'getAvailableSlots');
         try {
-            const result = await getAvailableSlots({ stylistName: selectedBooking.stylist, date: formattedDate, hairstyleId: currentBookingItem.id });
+            // FIX: Pass the clean 'YYYY-MM-DD' date directly.
+            const result = await getAvailableSlots({ stylistName: selectedBooking.stylist, date: dateToSend, hairstyleId: currentBookingItem.id });
             const availableSlots = new Set(result.data.slots || []);
             const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
             const allSlots = hoursDoc.data().time_slots || [];
@@ -656,19 +685,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert("Please complete all booking selections.");
         }
         
-        // --- THIS IS THE DATE FIX #3 ---
-        const parts = selectedBooking.date.split('-');
-        const dateObj = new Date(parts[0], parts[1] - 1, parts[2]); 
-        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ', ');
+        // FIX: Reverted all date formatting here as well. The selectedBooking.date is already 'YYYY-MM-DD'.
+        const dateToSave = selectedBooking.date;
         
         console.log(`--- Confirming Booking ---`);
-        console.log(`Final Date String for Firestore: "${formattedDate}"`);
+        console.log(`Final Date String for Firestore: "${dateToSave}"`);
         
         const bookingData = {
             hairstyleId: currentBookingItem.id, serviceName: currentBookingItem.name, customerId: currentUser.uid,
             customerName: currentUser.displayName || 'Customer', stylistName: selectedBooking.stylist,
-            date: formattedDate, time: selectedBooking.time, status: "Pending",
-            // --- THIS IS THE FIX FOR THE APP CRASH ---
+            // FIX: Save the clean 'YYYY-MM-DD' date string directly to Firestore.
+            date: dateToSave, 
+            time: selectedBooking.time, status: "Pending",
             timestamp: Date.now() 
         };
 
@@ -683,7 +711,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- NEW: 2.8. PROFILE FEATURES (BOOKINGS, ORDERS, NOTIFICATIONS) ---
-    
     function listenForMyBookings(uid) {
         const q = query(collection(db, "bookings"), where("customerId", "==", uid), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => renderMyBookings(snapshot.docs.map(d => ({id: d.id, ...d.data()}))));
@@ -708,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderMyOrders(orders) {
         const container = document.getElementById('my-orders-container');
+        if (!container) return;
         if (orders.length === 0) { container.innerHTML = '<p>You have no past orders.</p>'; return; }
         container.innerHTML = orders.map(o => `
             <div class="list-item-card">
@@ -719,12 +747,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function listenForNotifications(uid) {
-        const q = query(collection(db, 'users', uid, 'notifications'), orderBy("timestamp", "desc"));
-        onSnapshot(q, (snapshot) => renderNotifications(snapshot.docs.map(d => d.data())));
+        const q = query(collection(db, 'users', uid, 'notifications'), where("isRead", "==", false));
+        onSnapshot(q, (snapshot) => {
+            notificationsBadge.textContent = snapshot.size;
+            notificationsBadge.style.display = snapshot.size > 0 ? 'flex' : 'none';
+        });
+        const fullQuery = query(collection(db, 'users', uid, 'notifications'), orderBy("timestamp", "desc"));
+        onSnapshot(fullQuery, (snapshot) => renderNotifications(snapshot.docs.map(d => d.data())));
     }
     
     function renderNotifications(notifications) {
          const container = document.getElementById('notifications-container');
+         if (!container) return;
          if (notifications.length === 0) { container.innerHTML = '<p>You have no notifications.</p>'; return; }
          container.innerHTML = notifications.map(n => `
             <div class="list-item-card">
@@ -733,14 +767,15 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
          `).join('');
     }
-
-    // --- EVENT DELEGATION for opening booking detail chat ---
-    document.getElementById('my-bookings-panel').addEventListener('click', (e) => {
+    
+    // Event delegation for opening booking detail chat
+    myBookingsPanel.addEventListener('click', (e) => {
         const card = e.target.closest('.list-item-card');
         if (card && card.dataset.bookingId) {
             openBookingDetailWithChat(card.dataset.bookingId);
         }
     });
+
 
     let unsubscribeChat;
     async function openBookingDetailWithChat(bookingId) {
@@ -754,8 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!bookingDoc.exists()) { modalBody.innerHTML = '<p>Booking not found.</p>'; return; }
         const booking = bookingDoc.data();
 
-        const messagesRef = collection(db, "bookings", bookingId, "messages");
-        const q = query(messagesRef, orderBy("timestamp"));
+        const q = query(collection(db, "bookings", bookingId, "messages"), orderBy("timestamp"));
 
         unsubscribeChat = onSnapshot(q, (snapshot) => {
             let chatHtml = '<div class="chat-messages-container">'; // Wrapper for messages
@@ -792,7 +826,197 @@ document.addEventListener('DOMContentLoaded', () => {
             timestamp: serverTimestamp()
         });
     }
-    
+
+    // --- FAQ ACCORDION ---
+    document.querySelectorAll('.faq-question').forEach(button => {
+        button.addEventListener('click', () => {
+            const item = button.parentElement;
+            const answer = button.nextElementSibling;
+            if (item.classList.contains('active')) {
+                item.classList.remove('active');
+                answer.style.maxHeight = null;
+            } else {
+                item.classList.add('active');
+                answer.style.maxHeight = answer.scrollHeight + "px";
+            }
+        });
+    });
+
+    async function openEditProfileModal() {
+        if (!currentUser) return;
+        try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) {
+                alert('User profile not found.');
+                return;
+            }
+            const userData = userDocSnap.data();
+
+            editProfileModal.innerHTML = `
+                <div class="modal">
+                    <div class="off-canvas-header">
+                        <h2>Edit Profile</h2>
+                        <button class="close-panel-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="edit-profile-form" class="profile-form" data-image-removed="false">
+                            <div class="profile-picture-uploader">
+                                <label for="profile-picture-input">
+                                    <img src="${userData.imageUrl || 'https://placehold.co/120x120/F4DCD6/7C4F55?text=User'}" alt="Profile Picture" id="profile-picture-preview">
+                                    <div class="picture-overlay"><span>Change</span></div>
+                                </label>
+                                <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
+                                <button type="button" id="remove-picture-btn">Remove</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="profile-name">Full Name</label>
+                                <input type="text" id="profile-name" value="${userData.name || ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="profile-phone">Phone Number</label>
+                                <input type="tel" id="profile-phone" value="${userData.phone || ''}" required pattern="[0-9]{10}" title="Please enter a 10-digit phone number.">
+                            </div>
+                            <div class="form-group">
+                                <label for="profile-email">Email Address</label>
+                                <input type="email" id="profile-email" value="${userData.email || ''}" disabled>
+                                <small>Email cannot be changed.</small>
+                            </div>
+                            <button type="submit" class="book-btn" style="width: 100%;">Save Changes</button>
+                            <p id="profile-error-msg"></p>
+                        </form>
+                    </div>
+                </div>
+            `;
+            editProfileModal.style.display = 'flex';
+            modalBackdrop.style.display = 'block';
+
+            // Listener for the remove picture button
+            document.getElementById('remove-picture-btn').addEventListener('click', () => {
+                document.getElementById('profile-picture-preview').src = 'https://placehold.co/120x120/F4DCD6/7C4F55?text=User';
+                document.getElementById('profile-picture-input').value = ''; // Clear the file input
+                document.getElementById('edit-profile-form').dataset.imageRemoved = 'true';
+            });
+
+            document.getElementById('profile-picture-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        document.getElementById('profile-picture-preview').src = event.target.result;
+                        document.getElementById('edit-profile-form').dataset.imageRemoved = 'false'; // A new image overrides removal
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            document.getElementById('edit-profile-form').addEventListener('submit', handleProfileUpdate);
+        } catch (error) {
+            console.error("Error opening profile modal:", error);
+            alert('Could not load profile data.');
+        }
+    }
+
+    async function handleProfileUpdate(e) {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        const nameInput = document.getElementById('profile-name');
+        const phoneInput = document.getElementById('profile-phone');
+        const fileInput = document.getElementById('profile-picture-input');
+        const errorMsg = document.getElementById('profile-error-msg');
+        const saveButton = e.target.querySelector('button[type="submit"]');
+        const imageRemoved = e.target.dataset.imageRemoved === 'true';
+
+        const newName = nameInput.value.trim();
+        const newPhone = phoneInput.value.trim();
+        const file = fileInput.files[0];
+        
+        // Validation
+        if (!newName) {
+            errorMsg.textContent = 'Name cannot be empty.';
+            return;
+        }
+        if (!/^\d{10}$/.test(newPhone)) {
+            errorMsg.textContent = 'Please enter a valid 10-digit phone number.';
+            return;
+        }
+        errorMsg.textContent = '';
+        saveButton.disabled = true;
+        saveButton.textContent = 'Saving...';
+
+        try {
+            let downloadURL = null;
+            if (file) {
+                const storageRef = ref(storage, `profile_pictures/${currentUser.uid}`);
+                const uploadResult = await uploadBytes(storageRef, file);
+                downloadURL = await getDownloadURL(uploadResult.ref);
+            }
+
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const dataToUpdate = {
+                name: newName,
+                phone: newPhone,
+            };
+
+            if (imageRemoved) {
+                dataToUpdate.imageUrl = '';
+            } else if (downloadURL) {
+                dataToUpdate.imageUrl = downloadURL;
+            }
+
+            await updateDoc(userDocRef, dataToUpdate);
+            alert('Profile updated successfully!');
+            modalBackdrop.click();
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            errorMsg.textContent = 'Failed to update profile. Please try again.';
+        } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Changes';
+        }
+    }
+
+    async function markNotificationsAsRead() {
+        if (!currentUser) return;
+        const notificationsRef = collection(db, 'users', currentUser.uid, 'notifications');
+        const q = query(notificationsRef, where("isRead", "==", false));
+        
+        try {
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                return; // No unread notifications to update
+            }
+
+            // Use a batch to update all docs at once for efficiency
+            const batch = writeBatch(db);
+            querySnapshot.forEach(doc => {
+                batch.update(doc.ref, { isRead: true });
+            });
+            await batch.commit();
+            console.log(`${querySnapshot.size} notifications marked as read.`);
+        } catch (error) {
+            console.error("Error marking notifications as read: ", error);
+        }
+    }
+
+     function openContactModal() {
+        contactModal.innerHTML = `
+            <div class="modal">
+                <div class="off-canvas-header">
+                    <h2>Contact Us</h2>
+                    <button class="close-panel-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>For support, please email us at <a href="mailto:support@gadissalon.com">support@gadissalon.com</a> or call us at (123) 456-7890.</p>
+                </div>
+            </div>
+        `;
+        contactModal.style.display = 'flex';
+        modalBackdrop.style.display = 'block';
+    }
+
+ 
     // --- All other functions (updateUIAfterAuthStateChange, logoutButton, profileButton, etc.) ---
     // Note: You would also add functions for openEditProfileModal, openContactModal, and their form handlers here.
 });

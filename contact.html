@@ -4,47 +4,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gadis Salon - Contact</title>
+    <title>Gadis Salon - Home</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
     <header class="navbar">
-    <a href="index.html" class="logo">Gadis Salon</a>
-    <nav class="navbar-links">
-        <a href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact Us</a>
-        
-        <a href="login.html" id="login-link">Login</a> 
-        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
-        <a href="#" id="logout-button" style="display: none;">Logout</a>
-    </nav>
-</header>
+        <a href="index.html" class="logo">Gadis Salon</a>
+        <nav class="navbar-links">
+            <a href="index.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="gallery.html">Gallery</a>
+            <a href="about.html">About</a>
+            <a href="contact.html" class="active">Contact Us</a>
+            
+            
+            
+            <a href="#" id="login-link">Login</a> 
+            <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
+            <a href="#" id="logout-button" style="display: none;">Logout</a>
+        </nav>
+    </header>
 
     <main>
+        <section class="contact-hero">
+            <div class="container">
+                <h1 style="font-size: 3rem; margin-bottom: 20px;">Contact Us</h1>
+                <p style="font-size: 1.2rem;">We'd love to hear from you</p>
+            </div>
+        </section>
+
         <section class="content-section container">
-            <h1>Contact Us</h1>
+            <div class="contact-info">
+                <div class="info-card">
+                    <h3>Visit Our Salon</h3>
+                    <p>Makatu St</p>
+                    <p>House no 995</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Call Us</h3>
+                    <p>Phone: 068 281 5872</p>
+                    <p>Text: 068 281 5872</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Email Us</h3>
+                    <p>info@gadissalon.com</p>
+                    <p>appointments@gadissalon.com</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Hours</h3>
+                    <p>Tuesday - Saturday: 9AM - 7PM</p>
+                    <p>Sunday: 10AM - 4PM</p>
+                    <p>Monday: Closed</p>
+                </div>
+            </div>
+
             <div class="contact-form-container">
-                <h2>Get in Touch</h2>
-                <form action="#" method="post">
+                <h2>Send Us a Message</h2>
+                <form id="contact-form">
                     <div class="form-group">
-                        <label for="name">Name</label>
+                        <label for="name">Your Name</label>
                         <input type="text" id="name" name="name" required>
                     </div>
                     <div class="form-group">
-                        <label for="email">Email</label>
+                        <label for="email">Email Address</label>
                         <input type="email" id="email" name="email" required>
                     </div>
                     <div class="form-group">
-                        <label for="message">Message</label>
-                        <textarea id="message" name="message" required></textarea>
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="service">Service Interested In</label>
+                        <select id="service" name="service">
+                            <option value="">Select a service</option>
+                            <option value="haircut">HairStyles</option>
+                            <option value="color">Products</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Your Message</label>
+                        <textarea id="message" name="message" required placeholder="Tell us about your hair goals or any questions you have..."></textarea>
                     </div>
                     <button type="submit" class="submit-btn">Send Message</button>
                 </form>
+            </div>
+
+            <div class="map-container">
+                <iframe 
+                    src="https://maps.app.goo.gl/Wq3zSMM6ESrEw1HE6" 
+                    width="100%" 
+                    height="400" 
+                    style="border:0;" 
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
             </div>
         </section>
     </main>
@@ -78,7 +137,9 @@
             <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
         </div>
     </footer>
+
+    <script>
+       
+    </script>
 </body>
-<script type="module" src="js/main.js"></script>
-<script src="js/script.js"></script>
 </html>

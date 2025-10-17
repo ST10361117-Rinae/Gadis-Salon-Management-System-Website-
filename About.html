@@ -1,42 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gadis Salon - About</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
-    <link rel="stylesheet" href="css/style.css">
-</head>
+    <style>
+        /* css/style.css
+           Single stylesheet for all Gadis Salon pages
+           Color palette inspired by placeholder images:
+           Primary: #D67A84 (warm rose)
+           Accent:  #F4DCD6 (soft pink)
+           Dark:    #333333 (text)
+           Muted:   #7C4F55 (deep muted)
+           Light:   #FFFFFF
+        */
 
+        :root{
+        --primary: #D67A84;
+        --accent:  #F4DCD6;
+        --muted:   #7C4F55;
+        --dark:    #333333;
+        --soft:    #F9F6F6;
+        --white:   #FFFFFF;
+        --glass:   rgba(255,255,255,0.6);
+
+        --radius-sm: 8px;
+        --radius-lg: 16px;
+
+        --container-max: 1100px;
+        --gutter: 1.25rem;
+        --transition: 200ms ease;
+        }
+
+        /* Basic reset + box-sizing */
+        *,
+        *::before,
+        *::after { box-sizing: border-box; }
+
+        html,body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        color: var(--dark);
+        background: linear-gradient(180deg, #fff 0%, #fff 60%, var(--soft) 100%);
+        -webkit-font-smoothing:antialiased;
+        -moz-osx-font-smoothing:grayscale;
+        line-height: 1.5;
+        font-size: 16px;
+        }
+
+        /* Global helpers */
+        .container {
+        max-width: var(--container-max);
+        margin: 0 auto;
+        padding: 0 calc(var(--gutter));
+        }
+
+        /* NAVBAR */
+        .navbar {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:1rem;
+        padding: 0.8rem calc(var(--gutter));
+        background: linear-gradient(90deg, rgba(214,122,132,0.06) 0%, rgba(214,122,132,0.03) 100%);
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid rgba(124,79,85,0.06);
+        }
+
+        .logo {
+        font-weight:700;
+        font-size:1.25rem;
+        color: var(--muted);
+        text-decoration:none;
+        padding:0.25rem 0.5rem;
+        border-radius: 6px;
+        }
+        .logo:hover { transform: translateY(-1px); transition: var(--transition); }
+
+        /* NAV LINKS */
+        .navbar-links {
+        display:flex;
+        gap: 0.75rem;
+        align-items:center;
+        }
+        .navbar-links a {
+        text-decoration:none;
+        color: var(--dark);
+        padding: 0.5rem 0.6rem;
+        border-radius: 8px;
+        font-weight:500;
+        transition: background var(--transition), color var(--transition), transform var(--transition);
+        }
+        .navbar-links a:hover {
+        background: var(--accent);
+        transform: translateY(-2px);
+        }
+        .navbar-links a.active {
+        background: linear-gradient(90deg,var(--primary),var(--muted));
+        color: var(--white);
+        box-shadow: 0 6px 18px rgba(214,122,132,0.12);
+        }
+
+        /* HERO */
+        .hero-section{
+        padding: 4rem 0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        background-image: linear-gradient(180deg, rgba(214,122,132,0.02), rgba(124,79,85,0.01));
+        }
+        .hero-section h1{
+        font-size: clamp(1.75rem, 3.6vw, 3rem);
+        margin: 0 0 0.5rem 0;
+        line-height: 1.05;
+        font-weight:800;
+        }
+        .hero-section h1 span{
+        color: var(--primary);
+        background: linear-gradient(90deg, rgba(214,122,132,0.12), rgba(244,220,214,0.12));
+        padding: 0.1rem 0.35rem;
+        border-radius: 6px;
+        }
+        .hero-section p{
+        max-width: 760px;
+        margin: 0.5rem auto 1.25rem;
+        color: rgba(51,51,51,0.9);
+        }
+
+        /* CTA Buttons */
+        .cta-buttons {
+        display:flex;
+        gap: 0.75rem;
+        justify-content:center;
+        flex-wrap:wrap;
+        margin-top: 0.8rem;
+        }
+        .book-btn, .shop-btn {
+        display:inline-block;
+        text-decoration:none;
+        padding: 0.7rem 1.1rem;
+        border-radius: 12px;
+        font-weight:600;
+        transition: transform var(--transition), box-shadow var(--transition);
+        border: none;
+        }
+        .book-btn {
+        background: linear-gradient(90deg,var(--primary),var(--muted));
+        color: var(--white);
+        box-shadow: 0 8px 24px rgba(214,122,132,0.14);
+        }
+        .book-btn:hover { transform: translateY(-3px); }
+        .shop-btn {
+        background: transparent;
+        color: var(--muted);
+        border: 2px solid rgba(124,79,85,0.14);
+        background: linear-gradient(180deg, rgba(244,220,214,0.5), transparent);
+        }
+        .shop-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(124,79,85,0.06); }
+
+        /* CONTENT SECTIONS */
+        .content-section {
+        padding: 2.5rem 0;
+        background: transparent;
+        }
+
+        /* SERVICE LIST */
+        .service-list{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-top:1.2rem;
+        }
+        .service-card{
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        padding:1rem 1rem;
+        box-shadow: 0 8px 24px rgba(124,79,85,0.04);
+        border:1px solid rgba(124,79,85,0.04);
+        transition: transform var(--transition), box-shadow var(--transition);
+        }
+        .service-card h2{ margin:0 0 0.4rem 0; font-size:1.1rem; color:var(--muted); }
+        .service-card p{ margin:0; color: rgba(51,51,51,0.8); font-size:0.95rem; }
+        .service-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(124,79,85,0.08); }
+
+        /* FOOTER */
+        .footer {
+        margin-top: 2.5rem;
+        padding: 2rem 0;
+        background: linear-gradient(180deg, rgba(124,79,85,0.03), rgba(214,122,132,0.02));
+        border-top: 1px solid rgba(124,79,85,0.04);
+        }
+        .footer-container {
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap:1rem;
+        align-items:start;
+        padding-bottom: 1rem;
+        }
+        .footer h3 { margin: 0 0 0.5rem; color: var(--muted); }
+        .footer p, .footer a { color: rgba(51,51,51,0.8); font-size:0.95rem; text-decoration:none; }
+        .footer-links ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem; }
+        .footer-links a:hover { text-decoration: underline; color: var(--muted); }
+
+        .footer-social a { display:inline-block; margin-right:0.5rem; opacity:0.95; }
+        .footer-bottom { text-align:center; padding-top: 0.8rem; border-top: 1px solid rgba(124,79,85,0.03); margin-top:1rem; color: rgba(51,51,51,0.6); }
+
+        /* Small UI niceties */
+        a { color: inherit; }
+        img { display:block; max-width:100%; height:auto; }
+
+        /* Accessibility: focus states */
+        a:focus, button:focus, input:focus, textarea:focus {
+        outline: 3px solid rgba(214,122,132,0.18);
+        outline-offset: 2px;
+        }
+
+        /* Responsive tweaks */
+        @media (max-width: 900px){
+        .navbar { padding: 0.6rem calc(var(--gutter)); }
+        .navbar-links { gap:0.5rem; font-size:0.95rem; }
+        .hero-section { padding: 3rem 0; }
+        .hero-section p { padding: 0 1rem; }
+        }
+
+        @media (max-width: 560px){
+        .navbar { flex-wrap:wrap; gap:0.5rem; padding:0.6rem; }
+        .cta-buttons { flex-direction:column; gap:0.6rem; }
+        .footer-container { padding: 0.5rem; }
+        }
+
+        /* Utility classes (if you need them) */
+        .text-center { text-align:center; }
+        .mb-1 { margin-bottom:1rem; }
+
+        /* Additional styles for about page */
+        .about-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('c:\Users\RC_Student_Lab\Downloads\WhatsApp Image 2025-10-17 at 20.28.09.jpeg') no-repeat center center/cover;
+            height: 50vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+        }
+        
+        .team-section {
+            padding: 80px 0;
+        }
+        
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .team-member {
+            text-align: center;
+            background: var(--white);
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 8px 24px rgba(124,79,85,0.04);
+            border:1px solid rgba(124,79,85,0.04);
+            transition: transform var(--transition), box-shadow var(--transition);
+        }
+
+        .team-member:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 40px rgba(124,79,85,0.08);
+        }
+        
+        .team-member img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 5px solid var(--soft);
+        }
+
+        .team-member h3 {
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .team-member p {
+            color: rgba(51,51,51,0.8);
+            margin: 5px 0;
+        }
+
+       
+    </style>
+</head>
 <body>
     <header class="navbar">
-    <a href="index.html" class="logo">Gadis Salon</a>
-    <nav class="navbar-links">
-        <a href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact Us</a>
-        
-        <a href="login.html" id="login-link">Login</a> 
-        <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
-        <a href="#" id="logout-button" style="display: none;">Logout</a>
-    </nav>
-</header>
+        <a href="index.html" class="logo">Gadis Salon</a>
+        <nav class="navbar-links">
+            <a href="index.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="gallery.html">Gallery</a>
+            <a href="about.html" class="active">About</a>
+            <a href="contact.html">Contact Us</a>
+            
+            
+            <a href="#" id="login-link">Login</a> 
+            <a href="profile.html" id="profile-link" style="display: none;">Profile</a>
+            <a href="#" id="logout-button" style="display: none;">Logout</a>
+        </nav>
+    </header>
 
     <main>
+        <section class="about-hero">
+            <div class="container">
+                <h1 style="font-size: 3rem; margin-bottom: 20px;">About Gadis Salon</h1>
+                <p style="font-size: 1.2rem;">Dedicated to women's hair beauty since 2010</p>
+            </div>
+        </section>
+
         <section class="content-section container">
-            <h1>About Gadis Salon</h1>
             <div class="about-content">
                 <div class="about-text">
-                    <p>Gadis Salon was founded with a passion for beauty and a commitment to exceptional client experience.</p>
-                    <p>Our skilled stylists stay on top of the latest trends to deliver top-quality service tailored to your needs.</p>
-                    <p>Thank you for choosing Gadis Salon. We can't wait to make your beauty vision a reality.</p>
+                    <p style="font-size: 1.3rem; line-height: 1.8; margin-bottom: 30px;">
+                        Gadis Salon was founded with a passion for beauty and a commitment to exceptional client experience. We believe every woman deserves to feel beautiful and confident with her hair.
+                    </p>
+                    
+                    <p style="margin-bottom: 20px; font-size: 1.1rem;">
+                        Our skilled stylists stay on top of the latest trends and techniques in women's hair care, ensuring we deliver top-quality service tailored to your unique needs and preferences.
+                    </p>
+                    
+                    <p style="margin-bottom: 20px; font-size: 1.1rem;">
+                        We specialize exclusively in women's hair services because we believe in focusing our expertise to provide the best possible results. From everyday styles to special occasion looks, we're here to make your beauty vision a reality.
+                    </p>
+                    
+                    <p style="font-size: 1.1rem;">
+                        Thank you for choosing Gadis Salon. We can't wait to welcome you to our salon family and help you discover the beauty of your hair.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="team-section" style="background-color: var(--soft);">
+            <div class="container">
+                <h1 style="text-align: center; margin-bottom: 20px;">Meet Our Team</h1>
+                <p style="text-align: center; margin-bottom: 50px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Our talented stylists are dedicated to providing you with exceptional service and stunning results.
+                </p>
+                
+                <div class="team-grid">
+                    <div class="team-member">
+                        <img src="c:\Users\RC_Student_Lab\Downloads\WhatsApp Image 2025-10-13 at 15.57.09.jpeg" alt="Gadis Magadagela" onerror="this.src='https://images.unsplash.com/photo-1580618672591-eb180b1a973f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
+                        <h3>Gadis Magadagela</h3>
+                        <p>Master Stylist & Owner</p>
+                    </div>
+                    
+                    <div class="team-member">
+                        <img src="c:\Users\RC_Student_Lab\Downloads\WhatsApp Image 2025-10-17 at 20.28.08.jpeg" alt="Rosy" onerror="this.src='https://images.unsplash.com/photo-1595475884562-073c30d45670?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
+                        <h3>Rosy</h3>
+                        <p>Stylist</p>
+                    </div>
+                    
+                    <div class="team-member">
+                        <img src="c:\Users\RC_Student_Lab\Downloads\WhatsApp Image 2025-10-17 at 20.28.10 (1).jpeg" alt="Amahle" onerror="this.src='https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
+                        <h3>Amahle</h3>
+                        <p>Stylist</p>
+                    </div>
+                    
+                    <div class="team-member">
+                        <img src="c:\Users\RC_Student_Lab\Downloads\WhatsApp Image 2025-10-17 at 20.28.10.jpeg" alt="Mandy" onerror="this.src='https://images.unsplash.com/photo-1580618672591-eb180b1a973f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
+                        <h3>Mandy</h3>
+                        <p>Stylist</p>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
+
+   
 
     <footer class="footer">
         <div class="footer-container">
@@ -67,7 +413,8 @@
             <p>&copy; 2025 Gadis Salon. All Rights Reserved.</p>
         </div>
     </footer>
+
+    <script>
+    </script>
 </body>
-<script type="module" src="js/main.js"></script>
-<script src="js/script.js"></script>
 </html>

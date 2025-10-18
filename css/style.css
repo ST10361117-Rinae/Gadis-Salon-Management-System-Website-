@@ -932,8 +932,12 @@ margin-left: 0;
 
 .chat-bubble .ticks {
     font-size: 0.8rem;
-    color: rgba(0, 0, 0, 0.4); /* Default tick color for SENT/DELIVERED */
     margin-bottom: 2px; /* Small adjustment for vertical alignment */
+}
+
+/* --- FIX: Correct tick color for stylist messages --- */
+.chat-bubble.stylist .ticks {
+    color: rgba(255, 255, 255, 0.6); /* Lighter ticks on dark background */
 }
 
 .chat-bubble .ticks.read {

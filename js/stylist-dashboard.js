@@ -417,6 +417,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function formatTimestamp(fbTimestamp) {
+        if (!fbTimestamp || !fbTimestamp.toDate) return '';
+        const date = fbTimestamp.toDate();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    // Helper function to generate HTML for chat message status ticks
+    function getStatusTicks(status) {
+        switch (status) {
+            case 'SENT':
+                return '<span class="ticks"><i class="fas fa-check"></i></span>';
+            case 'DELIVERED':
+                return '<span class="ticks"><i class="fas fa-check-double"></i></span>';
+            case 'READ':
+                return '<span class="ticks read"><i class="fas fa-check-double"></i></span>';
+            default:
+                return '';
+        }
+    }
+
+
     // Opens a conversation when a ticket is clicked from the list
     function openSupportConversation(ticketId, status) {
         currentOpenTicketId = ticketId;
@@ -778,17 +801,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NEW: Function to update stylist's messages to "Read" in booking chat ---
+    // Function to mark previous messages from the stylist as "Read"
     async function markBookingMessagesAsRead(bookingId) {
-        const repliesRef = collection(db, "bookings", bookingId, "messages");
-        const q = query(repliesRef, where("senderUid", "==", currentStylistId), where("status", "!=", "Read"));
+        if (!currentStylistId) return;
+        const messagesRef = collection(db, "bookings", bookingId, "messages");
+        const q = query(messagesRef, where("senderUid", "==", currentStylistId), where("status", "!=", "READ"));
         
         try {
             const querySnapshot = await getDocs(q);
-            querySnapshot.forEach(docSnap => {
-                const messageRef = doc(db, "bookings", bookingId, "messages", docSnap.id);
-                updateDoc(messageRef, { status: "Read" });
-            });
+            if (!querySnapshot.empty) {
+                const batch = writeBatch(db);
+                querySnapshot.forEach(docSnap => {
+                    batch.update(docSnap.ref, { status: "READ" });
+                });
+                await batch.commit();
+            }
         } catch (error) {
             console.error("Error marking booking messages as read:", error);
         }
@@ -799,12 +826,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function openBookingModal(bookingId) {
         currentOpenBookingId = bookingId;
         modalOverlay.style.display = 'flex';
-        setTimeout(() => { // Allow display change to render before animating
-             modalOverlay.style.opacity = '1';
-             modal.style.transform = 'scale(1)';
+        setTimeout(() => {
+            modalOverlay.style.opacity = '1';
+            modal.style.transform = 'scale(1)';
         }, 10);
 
-        // Fetch booking details
         const bookingRef = doc(db, "bookings", bookingId);
         const bookingSnap = await getDoc(bookingRef);
 
@@ -816,38 +842,28 @@ document.addEventListener('DOMContentLoaded', () => {
             modalBookingTime.textContent = booking.time;
         }
 
-        // Listen for chat messages in real-time
         const messagesRef = collection(db, "bookings", bookingId, "messages");
         const q = query(messagesRef, orderBy("timestamp"));
 
-         unsubscribeChat = onSnapshot(q, (snapshot) => {
-            // --- NEW: Auto-read logic for booking chat ---
+        if (unsubscribeChat) unsubscribeChat(); // Unsubscribe from previous listener
+        unsubscribeChat = onSnapshot(q, (snapshot) => {
+            // Auto-read logic
             const docs = snapshot.docs;
-            if (docs.length > 0) {
-                const lastMessage = docs[docs.length - 1].data();
-                if (lastMessage.senderUid !== currentStylistId) {
-                    markBookingMessagesAsRead(bookingId);
-                }
+            if (docs.length > 0 && docs[docs.length - 1].data().senderUid !== currentStylistId) {
+                markBookingMessagesAsRead(bookingId);
             }
-            
+
             let messagesHtml = '';
-            docs.forEach(doc => {
+            snapshot.forEach(doc => {
                 const message = doc.data();
                 const bubbleClass = message.senderUid === currentStylistId ? 'stylist' : 'customer';
-                
-                // --- FIX: Add sender name and formatted timestamp ---
-                let statusTicks = '';
-                if (bubbleClass === 'stylist') {
-                    statusTicks = getStatusTicks(message.status || 'SENT');
-                }
-
                 messagesHtml += `
                     <div class="chat-bubble ${bubbleClass}">
                         <div class="chat-sender-name">${message.senderName}</div>
                         <span class="message-text">${message.messageText}</span>
                         <div class="chat-footer">
                             <span class="chat-timestamp">${formatTimestamp(message.timestamp)}</span>
-                            ${statusTicks}
+                            ${bubbleClass === 'stylist' ? getStatusTicks(message.status) : ''}
                         </div>
                     </div>
                 `;
@@ -912,10 +928,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageText: messageText,
                 senderName: currentUserData.name,
                 senderUid: currentStylistId,
-                status: "SENT", // This matches your app's structure for read receipts later
+                status: "SENT", // Set initial status
                 timestamp: serverTimestamp()
             });
-            chatMessageInput.value = ''; // Clear the input
+            chatMessageInput.value = '';
         } catch (error) {
             console.error("Error sending message: ", error);
             alert("Could not send message.");

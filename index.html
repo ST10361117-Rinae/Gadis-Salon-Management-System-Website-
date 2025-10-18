@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gadis Salon - Welcome</title>
-    <!-- Favicon using a placeholder for consistency -->
     <link rel="icon" type="image/png" href="/images/favicon.png">
-    <!-- Font Awesome for Icons -->
     <script src="https://kit.fontawesome.com/4d6ab489c8.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/css/home.css">
 </head>
@@ -23,8 +21,14 @@
         </nav>
         <div class="navbar-icons">
             <a href="#" id="fav-button" title="Favorites"><i class="fas fa-heart"></i></a>
-            <a href="#" id="notifications-button" title="Notifications"><i class="fas fa-bell"></i><span id="notifications-badge" class="badge" style="display: none;">0</span></a>
+            <a href="#" id="notifications-button" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span id="notifications-badge" class="badge" style="display: none;">0</span>
+            </a>
             <a href="#" id="cart-button" title="Cart"><i class="fas fa-shopping-cart"></i><span id="cart-badge" class="badge" style="display: none;">0</span></a>
+            
+            <!-- NEW: Welcome message placeholder for the animation -->
+            <span id="welcome-message" class="welcome-message"></span>
             <div class="profile-menu-container">
                 <a href="#" id="profile-button" title="Profile"><i class="fas fa-user"></i></a>
                 <div id="profile-dropdown" class="profile-dropdown">
@@ -57,15 +61,15 @@
 
     <main>
         <section id="home" class="hero-parallax">
-            <div class="parallax-bg" id="parallax-bg" style="background-image: url('images/bg5.jpg');"></div>
+            <div class="parallax-bg" id="parallax-bg"></div>
             
             <h1 class="parallax-text parallax-text-back" id="parallax-text-back">GADIS SALON</h1>
             
-            <img src="images/model-foreground7.png" alt="Model" class="parallax-fg" id="parallax-fg">
+            <img src="" alt="Model" class="parallax-fg" id="parallax-fg">
             
             <h1 class="parallax-text parallax-text-front" id="parallax-text-front">GADIS SALON</h1>
 
-            <div class="hero-content fade-in-up" id="hero-content">
+            <div class="hero-content" id="hero-content">
                 <p>Experience the art of beauty and radiant locks.</p>
                 <a href="#services" class="book-btn">Explore Our Services</a>
             </div>
@@ -179,17 +183,27 @@
          <div id="notifications-container" class="off-canvas-body"></div>
     </div>
     
-    <!-- NEW: Booking Detail & Chat Modal -->
+     <!-- Booking Detail & Chat Modal -->
     <div id="booking-detail-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header"><h2>Booking Details</h2><button class="close-panel-btn">&times;</button></div>
-            <div id="booking-detail-body" class="modal-body"></div>
+            <div id="booking-detail-body" class="modal-body">
+                 <!-- Chat content will be injected by JS -->
+            </div>
         </div>
     </div>
 
     <!-- NEW: Edit Profile Modal -->
     <div id="edit-profile-modal" class="modal-overlay">
-        <!-- Content injected by JS -->
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit Profile</h2>
+                <button class="close-btn" id="close-edit-profile-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="edit-profile-body">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
     </div>
 
     <!-- NEW: Contact Support Modal -->

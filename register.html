@@ -5,51 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account | Gadis Salon</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
     <script src="https://kit.fontawesome.com/4d6ab489c8.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-form">
-            <h1>Create an Account</h1>
-            <form id="registerForm">
-                <div class="form-group">
-                    <label for="name">Full Name</label>
-                    <input type="text" id="name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" pattern="[0-9]{10}" placeholder="e.g., 0812345678" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <!-- ADDED a wrapper and the icon -->
-                    <div class="password-wrapper">
-                        <input type="password" id="password" name="password" minlength="6" placeholder="At least 6 characters" required>
-                        <i class="fas fa-eye toggle-password"></i>
+    <div class="auth-container">
+        <div class="auth-panel-left">
+            <a href="index.html" class="home-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+            <h2>Join Us</h2>
+            <p>Create your account to unlock exclusive services.</p>
+        </div>
+        <div class="auth-panel-right">
+            <div class="auth-form-container">
+                <h1>Create Account</h1>
+                <p>It's quick and easy to get started.</p>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="name"><i class="fas fa-user"></i> Full Name</label>
+                        <input type="text" id="name" name="name" required placeholder="John Doe">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="confirm-password">Confirm Password</label>
-                    <!-- ADDED a wrapper and the icon -->
-                    <div class="password-wrapper">
-                        <input type="password" id="confirm-password" name="confirmPassword" required>
-                        <i class="fas fa-eye toggle-password"></i>
+                    <div class="form-group">
+                        <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
+                        <input type="email" id="email" name="email" required placeholder="you@example.com">
                     </div>
-                </div>
-                <button type="submit" class="btn">Register</button>
-                <p class="signup-link">Already have an account? <a href="login.html">Log in</a></p>
-            </form>
+                    <div class="form-group">
+                        <label for="phone"><i class="fas fa-phone"></i> Phone Number</label>
+                        <input type="tel" id="phone" name="phone" pattern="[0-9]{10}" placeholder="e.g., 0812345678" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password"><i class="fas fa-lock"></i> Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="password" name="password" minlength="6" placeholder="At least 6 characters" required>
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password"><i class="fas fa-lock"></i> Confirm Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="confirm-password" name="confirmPassword" required placeholder="Re-enter password">
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- FIX: Added the missing error message element -->
+                    <p id="register-error-msg" class="form-message error"></p>
+                    
+                    <button type="submit" class="btn">Register</button>
+                    <p class="auth-switch-link">Already have an account? <a href="login.html">Log in</a></p>
+                </form>
+            </div>
         </div>
     </div>
     
     <script type="module" src="js/register.js"></script>
     <script type="module" src="js/password-toggle.js"></script> 
-    <script src="js/script.js"></script>
 </body>
 </html>
-

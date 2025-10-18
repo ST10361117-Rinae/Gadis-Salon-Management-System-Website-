@@ -3,61 +3,78 @@ import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { auth, db } from './firebase-config.js';
 
-// Get the login form element from login.html
 const loginForm = document.getElementById('loginForm');
+const errorMsgElement = document.getElementById('login-error-msg');
 
-// Add an event listener for when the form is submitted
 loginForm.addEventListener('submit', async (event) => {
-    // Prevent the default form submission (which reloads the page)
     event.preventDefault();
 
-    // Get the email and password values from the form inputs
     const email = loginForm.email.value;
     const password = loginForm.password.value;
+    const button = loginForm.querySelector('button');
+
+    // Reset error message and disable button
+    errorMsgElement.textContent = '';
+    errorMsgElement.style.display = 'none';
+    button.disabled = true;
+    button.textContent = 'Logging in...';
 
     try {
-        // 1. Sign in the user with Firebase Authentication
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         console.log("User logged in successfully:", user.uid);
 
-        // 2. Get the user's role from Firestore
-        // We assume you have a 'users' collection where the document ID is the user's UID
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
+            // Set a flag in sessionStorage to trigger the welcome animation on the homepage
+            sessionStorage.setItem('justLoggedIn', 'true');
+            
             const userData = userDoc.data();
-            const role = userData.role; // Assumes you have a 'role' field in your user document
+            const role = userData.role;
 
             console.log("User role is:", role);
             
-            // 3. Redirect user based on their role
+            // Redirect user based on their role
             switch (role) {
                 case 'ADMIN':
-                    window.location.href = '/admin-dashboard.html'; // Create this page
+                    window.location.href = '/admin-dashboard.html';
                     break;
                 case 'WORKER':
-                    window.location.href = '/stylist-dashboard.html'; // Create this page
-                    break;
-                case 'CUSTOMER':
-                    window.location.href = '/index.html'; // Or a customer profile page
+                    window.location.href = '/stylist-dashboard.html';
                     break;
                 default:
-                    // If role is not defined, redirect to a generic home page
                     window.location.href = '/index.html';
             }
         } else {
-            // This case is unlikely if the user exists in Auth, but good practice to handle
             console.error("No user document found in Firestore!");
-            alert("Login successful, but could not find user details.");
-            window.location.href = '/index.html';
+            errorMsgElement.textContent = "Login successful, but could not find user details.";
+            errorMsgElement.style.display = 'block';
+            // Redirect to home anyway as a fallback
+            setTimeout(() => window.location.href = '/index.html', 2000);
         }
 
     } catch (error) {
-        // Handle login errors (e.g., wrong password, user not found)
         console.error("Login failed:", error.message);
-        alert("Login failed: " + error.message);
+        // Provide user-friendly error messages
+        let message = "An unknown error occurred.";
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                message = "Invalid email or password. Please try again.";
+                break;
+            case 'auth/too-many-requests':
+                message = "Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.";
+                break;
+        }
+        errorMsgElement.textContent = message;
+        errorMsgElement.style.display = 'block';
+    } finally {
+        // Re-enable the button
+        button.disabled = false;
+        button.textContent = 'Login';
     }
 });

@@ -3,6 +3,7 @@ import { setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-
 import { auth, db } from "./firebase-config.js";
 
 const registerForm = document.getElementById('registerForm');
+const errorMsgElement = document.getElementById('register-error-msg');
 
 registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -10,17 +11,28 @@ registerForm.addEventListener('submit', async (e) => {
     const email = registerForm.email.value;
     const phone = registerForm.phone.value;
     const password = registerForm.password.value;
-    const confirmPassword = registerForm.confirmPassword.value;
+    const confirmPassword = registerForm.querySelector('#confirm-password').value;
+    const button = registerForm.querySelector('button');
+
+    // Reset error message
+    errorMsgElement.textContent = '';
+    errorMsgElement.style.display = 'none';
 
     // --- VALIDATION ---
     if (password !== confirmPassword) {
-        alert("Passwords do not match.");
+        errorMsgElement.textContent = "Passwords do not match.";
+        errorMsgElement.style.display = 'block';
         return;
     }
     if (!/^\d{10}$/.test(phone)) {
-        alert("Please enter a valid 10-digit phone number (e.g., 0812345678).");
+        errorMsgElement.textContent = "Please enter a valid 10-digit phone number (e.g., 0812345678).";
+        errorMsgElement.style.display = 'block';
         return;
     }
+    
+    // Disable button during process
+    button.disabled = true;
+    button.textContent = 'Registering...';
 
     try {
         // Step 1: Create the user in Firebase Authentication
@@ -41,12 +53,21 @@ registerForm.addEventListener('submit', async (e) => {
             role: "CUSTOMER" // All new sign-ups are customers
         });
 
-        alert("Registration successful! You are now logged in.");
+        // Set flag for welcome animation on homepage
+        sessionStorage.setItem('justLoggedIn', 'true');
+
         window.location.href = "index.html"; // Redirect to the homepage
 
     } catch (error) {
         console.error("Error during registration:", error);
-        alert(`Registration failed: ${error.message}`);
+        let message = "An unknown error occurred during registration.";
+         if (error.code === 'auth/email-already-in-use') {
+            message = "This email address is already in use by another account.";
+        }
+        errorMsgElement.textContent = message;
+        errorMsgElement.style.display = 'block';
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Register';
     }
 });
-

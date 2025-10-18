@@ -9,20 +9,38 @@
 */
 
 :root{
---primary: #D67A84;
---accent:  #F4DCD6;
---muted:   #7C4F55;
---dark:    #333333;
---soft:    #F9F6F6;
---white:   #FFFFFF;
---glass:   rgba(255,255,255,0.6);
+    --primary: #D67A84;
+    --accent:  #F4DCD6;
+    --muted:   #7C4F55;
+    --dark:    #333333;
+    --soft:    #F9F6F6;
+    --white:   #FFFFFF;
+    --background: #FFFFFF;
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --card-bg: #FFFFFF;
+    --border-color: rgba(0,0,0,0.08);
+    --glass:   rgba(255,255,255,0.6);
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+    --container-max: 1100px;
+    --gutter: 1.25rem;
+    --transition: 200ms ease;
+}
 
---radius-sm: 8px;
---radius-lg: 16px;
+.dark-mode {
+  --background: #121212;
+  --text-primary: #EAEAEA;
+  --text-secondary: #A0A0A0;
+  --card-bg: #1E1E1E;
+  --soft: #2a2a2a;
+  --border-color: rgba(255,255,255,0.1);
+}
 
---container-max: 1100px;
---gutter: 1.25rem;
---transition: 200ms ease;
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Basic reset + box-sizing */
@@ -914,8 +932,12 @@ margin-left: 0;
 
 .chat-bubble .ticks {
     font-size: 0.8rem;
-    color: rgba(0, 0, 0, 0.4); /* Default tick color for SENT/DELIVERED */
     margin-bottom: 2px; /* Small adjustment for vertical alignment */
+}
+
+/* --- FIX: Correct tick color for stylist messages --- */
+.chat-bubble.stylist .ticks {
+    color: rgba(255, 255, 255, 0.6); /* Lighter ticks on dark background */
 }
 
 .chat-bubble .ticks.read {
@@ -1906,6 +1928,400 @@ thead th.sorted i {
 }
 /* --- END OF NEW SECTION --- */
 
+/* --- ADD THIS NEW SECTION FOR THE NEW HOMEPAGE DESIGN --- */
+.navbar { z-index: 999; }
+
+/* Transparent Navbar */
+.navbar.transparent {
+    background: transparent;
+    position: fixed; /* Make it stick to the top */
+    width: 100%;
+    transition: background-color 300ms ease, box-shadow 300ms ease;
+}
+.navbar.scrolled {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(124, 79, 85, 0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.dark-mode .navbar.scrolled { background: rgba(18, 18, 18, 0.8); }
+
+.navbar-icons { display: flex; align-items: center; gap: 1rem; }
+.navbar-icons a { color: inherit; font-size: 1.2rem; position: relative; }
+.badge { position: absolute; top: -5px; right: -8px; background-color: var(--primary); color: white; font-size: 0.7em; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+
+/* Hero Section with Parallax Effect */
+.hero-parallax {
+    height: 100vh; /* Full screen height */
+    background-image: url('https://images.pexels.com/photos/3992870/pexels-photo-3992870.jpeg'); /* Placeholder Image */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed; /* This creates the parallax effect! */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+}
+
+.hero-content {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2rem 3rem;
+    border-radius: var(--radius-lg);
+}
+
+.hero-content h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.hero-content p {
+    font-size: 1.2rem;
+    max-width: 600px;
+}
+
+/* General Content Section Styling */
+.content-section {
+    padding: 4rem 1rem;
+}
+.content-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--muted);
+}
+/* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR ADVANCED HOMEPAGE DESIGN --- */
+
+/* Mobile Menu & Hamburger */
+.hamburger-menu {
+    display: none; /* Hidden on desktop */
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1001; /* Above the navbar */
+}
+
+.mobile-nav {
+    position: fixed;
+    top: 0;
+    right: -100%; /* Start off-screen */
+    width: 70%;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: right 0.4s ease-in-out;
+}
+.mobile-nav.open {
+    right: 0;
+}
+.mobile-nav a {
+    font-size: 1.5rem;
+    padding: 1rem 0;
+    text-decoration: none;
+    color: var(--muted);
+}
+
+
+/* Advanced Parallax Styling */
+.hero-parallax {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    overflow: hidden; /* Crucial for containing the layers */
+}
+
+.parallax-bg, .parallax-fg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 110%; /* Slightly taller to prevent gaps during scroll */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    will-change: transform; /* Performance optimization */
+}
+.parallax-fg {
+    height: 100%;
+    width: auto;
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    /* Centering the foreground image */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.hero-content {
+    position: relative; /* Ensure it's on top of the parallax layers */
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2rem 3rem;
+    border-radius: var(--radius-lg);
+}
+
+.hero-content h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.hero-content p {
+    font-size: 1.2rem;
+    max-width: 600px;
+}
+
+/* General Content Section Styling */
+.content-section {
+    padding: 5rem 1rem;
+}
+.content-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 2.5rem;
+    color: var(--muted);
+}
+
+/* Staggered Animation Class */
+.stagger-in > * {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    transition-delay: var(--delay);
+}
+.stagger-in.show > * {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .navbar-links {
+        display: none; /* Hide desktop links on mobile */
+    }
+    .hamburger-menu {
+        display: block; /* Show hamburger on mobile */
+    }
+    .hero-content {
+        padding: 1.5rem;
+    }
+    .parallax-fg {
+        max-width: 100%;
+        max-height: 100%;
+    }
+}
+/* --- END OF NEW SECTION --- */
+
+/* Product/Hairstyle Grids */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+.product-card { position: relative; overflow: hidden; border-radius: var(--radius-lg); background: var(--card-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-decoration: none; color: inherit; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.product-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.product-card img { width: 100%; height: 250px; object-fit: cover; }
+.product-card .card-content { padding: 1rem; }
+.sold-out-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
+.view-all-container { text-align: center; margin-top: 2rem; }
+
+/* --- MODAL & OFF-CANVAS STYLES --- */
+.modal-overlay, .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: none; }
+.modal-overlay { align-items: center; justify-content: center; }
+.modal-backdrop { background: rgba(0,0,0,0.6); }
+.modal { background: var(--card-bg); border-radius: var(--radius-lg); max-width: 90vw; width: 600px; max-height: 80vh; display: flex; flex-direction: column; }
+.product-detail-modal .modal-body { display: flex; gap: 1.5rem; padding: 2rem; }
+.product-detail-modal .product-image { width: 50%; }
+.product-detail-modal .product-info { width: 50%; }
+
+.off-canvas { position: fixed; top: 0; right: -400px; width: 400px; max-width: 90vw; height: 100vh; background: var(--card-bg); z-index: 1001; display: flex; flex-direction: column; transition: right 0.4s ease; }
+.off-canvas.open { right: 0; }
+.off-canvas-header { padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+.off-canvas-body { flex-grow: 1; overflow-y: auto; padding: 1rem; }
+.off-canvas-footer { padding: 1rem; border-top: 1px solid var(--border-color); }
+
+/* Cart Item Styles */
+.cart-item { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.cart-item-image { width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-sm); }
+.cart-item-details { flex-grow: 1; }
+.quantity-selector { display: flex; align-items: center; }
+.quantity-selector button { width: 30px; height: 30px; }
+
+/* --- ADD THIS NEW SECTION FOR FAVORITES & DETAIL MODAL --- */
+.favorite-item {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.favorite-item:last-child {
+    border-bottom: none;
+}
+.favorite-item-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+/* Favorite icon inside the detail modal */
+.favorite-btn-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(0,0,0,0.3);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+.favorite-btn-modal.favorited {
+    color: var(--primary);
+    background: rgba(255,255,255,0.8);
+}
+/* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR BOOKING MODAL --- */
+.booking-step {
+    margin-bottom: 1.5rem;
+}
+.booking-step h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: var(--muted);
+}
+
+.stylist-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.stylist-selector label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.stylist-selector input[type="radio"] {
+    display: none;
+}
+.stylist-selector input[type="radio"]:checked + label {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.time-slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.75rem;
+}
+
+.time-slot-btn {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    background: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.time-slot-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.time-slot-btn.selected {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+/* --- END OF NEW SECTION --- */
+
+/* --- ADD THIS NEW SECTION FOR FAVORITES & IMPROVED STYLING --- */
+
+/* Favorite Item Styling (similar to cart) */
+.favorite-item {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.favorite-item:last-child { border-bottom: none; }
+.favorite-item-image { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm); }
+
+/* Favorite Button in Detail Modal */
+.favorite-btn-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(0,0,0,0.3);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+.favorite-btn-modal:hover { background: rgba(0,0,0,0.5); }
+.favorite-btn-modal.favorited { color: var(--primary); background: rgba(255,255,255,0.9); }
+
+/* --- IMPROVED STYLING --- */
+
+/* Enhanced Product Card Styling */
+.product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.product-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+/* Enhanced About & Contact Sections */
+#about, #contact {
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+/* Enhanced Footer */
+.footer {
+    background: var(--soft);
+    color: var(--text-secondary);
+}
+.footer h3 {
+    color: var(--text-primary);
+}
+.footer a:hover {
+    color: var(--primary);
+}
+/* --- END OF NEW SECTION --- */
 /* --- ADD THIS NEW SECTION FOR SUPPORT TICKET HEADER --- */
 .ticket-view-header {
     display: flex;

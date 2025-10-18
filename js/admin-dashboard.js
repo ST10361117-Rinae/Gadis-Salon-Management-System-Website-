@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminTicketConversationContainer = document.getElementById('admin-ticket-conversation-container');
     const adminSupportChatForm = document.getElementById('admin-support-chat-form');
     const adminSupportChatInput = document.getElementById('admin-support-chat-input');
+    const closeTicketBtn = document.getElementById('close-ticket-btn');
     const closeTicketModalOverlay = document.getElementById('close-ticket-modal-overlay');
     const closeTicketModalCloseBtn = document.getElementById('close-ticket-modal-close-btn');
     const confirmCloseTicketBtn = document.getElementById('confirm-close-ticket-btn');
@@ -1005,9 +1006,11 @@ document.addEventListener('DOMContentLoaded', () => {
         adminTicketConversationContainer.innerHTML = '<p>Loading conversation...</p>';
 
         if (status === 'Closed') {
-            adminSupportChatForm.style.display = 'none'; // Hide form if closed
+            adminSupportChatForm.style.display = 'none';
+            closeTicketBtn.style.display = 'none'; // Hide button if already closed
         } else {
             adminSupportChatForm.style.display = 'flex';
+            closeTicketBtn.style.display = 'block'; // --- NEW: Show the close button
         }
 
         if (unsubscribeAdminSupportChat) unsubscribeAdminSupportChat();
@@ -1103,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- 15. Event Listeners for Closing a Ticket ---
-    adminTicketConversationContainer.addEventListener('dblclick', () => {
+    closeTicketBtn.addEventListener('click', () => {
         if (currentOpenTicketId) {
             closeTicketModalOverlay.style.display = 'flex';
         }

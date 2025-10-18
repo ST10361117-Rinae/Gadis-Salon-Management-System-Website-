@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetches the list of tickets for the current stylist
     function fetchSupportTickets(stylistId) {
         ticketListContainer.innerHTML = '<p>Loading tickets...</p>';
-        const q = query(collection(db, "support_messages"), where("senderUid", "==", stylistId), orderBy("timestamp", "desc"));
+        const q = query(collection(db, "support_messages"), where("participantUids", "array-contains", stylistId), orderBy("timestamp", "desc"));
 
         onSnapshot(q, (snapshot) => {
             if (snapshot.empty) {

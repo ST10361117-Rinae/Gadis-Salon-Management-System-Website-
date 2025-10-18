@@ -27,7 +27,6 @@
             </a>
             <a href="#" id="cart-button" title="Cart"><i class="fas fa-shopping-cart"></i><span id="cart-badge" class="badge" style="display: none;">0</span></a>
             
-            <!-- NEW: Welcome message placeholder for the animation -->
             <span id="welcome-message" class="welcome-message"></span>
             <div class="profile-menu-container">
                 <a href="#" id="profile-button" title="Profile"><i class="fas fa-user"></i></a>
@@ -40,6 +39,7 @@
                         <a href="#" id="my-bookings-link">My Bookings</a>
                         <a href="#" id="my-orders-link">My Orders</a>
                         <a href="#" id="edit-profile-link">Edit Profile</a>
+                        <a href="#" id="contact-support-link">Contact Support</a>
                         <a href="#" id="logout-button">Logout</a>
                     </div>
                     <div class="theme-switcher">
@@ -87,14 +87,82 @@
             <div class="view-all-container"><a href="#" id="view-all-products" class="view-all-btn">View All Products</a></div>
         </section>
 
-        <section id="about" class="content-section container">
+       <section id="about" class="content-section"> <div class="container">
             <h2>About Us</h2>
-            <p>Gadis Salon was founded with a passion for beauty and a commitment to an exceptional client experience. Our skilled stylists stay on top of the latest trends to deliver top-quality service tailored to your needs.</p>
+            <div class="about-us-layout">
+                <div class="about-us-image">
+                    <img src="/images/gadis.jpg" alt="Inside of Gadis Salon">
+                </div>
+                <div class="about-us-content">
+                    <h3>Crafting Beauty, Inspiring Confidence</h3>
+                    <p>Founded on the belief that beauty is an art form, Gadis Salon is more than just a place to get your hair done—it's an experience. We began with a simple mission: to create a welcoming sanctuary where our clients can unwind, feel pampered, and leave with a renewed sense of confidence.</p>
+                    <p>Our team of skilled stylists are not just technicians; they are artists who are passionate about their craft. We are dedicated to staying at the forefront of the latest trends and techniques in the beauty industry, ensuring that every cut, color, and style is tailored to your unique personality and lifestyle. We believe in continuous education and a collaborative approach, working closely with you to achieve the perfect look.</p>
+                    <p>At Gadis Salon, your comfort and satisfaction are our highest priorities. From the moment you step through our doors, you are part of the Gadis family. Welcome.</p>
+                </div>
+            </div>
         </section>
 
-        <section id="contact" class="content-section container">
-            <h2>Contact Us</h2>
-            <p>Get in touch with us for bookings and inquiries. We'd love to hear from you!</p>
+        <section id="contact" class="content-section"> <div class="container">
+            <h2>Get In Touch</h2>
+            <div class="contact-layout">
+                <div class="contact-form-container">
+                    <h3>Send us a Message</h3>
+                    <p>Have a question or need support? Fill out the form below, and we'll get back to you as soon as possible. You can view replies in the "Contact Support" section of your profile.</p>
+                    <form id="page-contact-form">
+                        <div class="form-group">
+                            <label for="contact-form-message">Your Message</label>
+                            <textarea id="contact-form-message" required placeholder="Please describe your issue or question..."></textarea>
+                        </div>
+                        <button type="submit" class="book-btn">Send Message</button>
+                    </form>
+                </div>
+                <div class="contact-info-container">
+                    <h3>Visit Us</h3>
+                    <p>Makatu St, House no 995</p>
+                    <div class="map-container">
+                        <iframe 
+                            src="https://maps.google.com/maps?q=-23.220938,29.993942&hl=es;z=14&amp;output=embed" 
+                            width="100%" 
+                            height="100%" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NEW FAQ SECTION -->
+        <section id="faq" class="content-section container">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <button class="faq-question">What are your opening hours?</button>
+                    <div class="faq-answer">
+                        <p>We are open Mondays to Sunday from 8:00 AM to 6:00 PM. We are closed on Hoildays.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">Do I need to book an appointment?</button>
+                    <div class="faq-answer">
+                        <p>While we do accept walk-ins if there is availability, we highly recommend booking an appointment in advance to secure your preferred time and stylist, especially for longer services like coloring or treatments.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">What is your cancellation policy?</button>
+                    <div class="faq-answer">
+                        <p>We kindly request at least 24 hours' notice for any cancellations or rescheduling. This allows us to offer the appointment slot to another client. Cancellations made with less than 24 hours' notice may be subject to a fee.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">Which products do you use and sell?</button>
+                    <div class="faq-answer">
+                        <p>We use a curated selection of high-quality, professional hair care products in our salon. You can browse and purchase our featured products directly from the "Shop" section on our website.</p>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
@@ -102,9 +170,9 @@
         <div class="footer-container">
             <div class="footer-info">
                 <h3>Gadis Salon</h3>
-                <p>123 Beauty Lane, Glamour City, 54321</p>
-                <p>Phone: (123) 456-7890</p>
-                <p>Email: info@gadissalon.com</p>
+                <p>Makatu St, House no 995</p>
+                <p>Phone: +27 68 281 5872</p>
+                <p>Email: whiteshytk@gmail.com</p>
             </div>
             <div class="footer-links">
                 <h3>Quick Links</h3>
@@ -128,6 +196,7 @@
         </div>
     </footer>
 
+    <div id="toast-container"></div>
     <div class="modal-backdrop"></div>
 
     <!-- MODALS AND OFF-CANVAS PANELS -->
@@ -165,25 +234,44 @@
         </div>
     </div>
 
-    <!-- NEW: My Bookings Panel -->
     <div id="my-bookings-panel" class="off-canvas">
         <div class="off-canvas-header"><h2>My Bookings</h2><button class="close-panel-btn">&times;</button></div>
         <div id="my-bookings-container" class="off-canvas-body"></div>
     </div>
 
-    <!-- NEW: My Orders Panel -->
     <div id="my-orders-panel" class="off-canvas">
         <div class="off-canvas-header"><h2>My Orders</h2><button class="close-panel-btn">&times;</button></div>
         <div id="my-orders-container" class="off-canvas-body"></div>
     </div>
     
-    <!-- NEW: Notifications Panel -->
     <div id="notifications-panel" class="off-canvas">
          <div class="off-canvas-header"><h2>Notifications</h2><button class="close-panel-btn">&times;</button></div>
          <div id="notifications-container" class="off-canvas-body"></div>
     </div>
+
+    <div id="support-panel" class="off-canvas wide">
+        <div class="off-canvas-header"><h2>Support Tickets</h2><button class="close-panel-btn">&times;</button></div>
+        <div class="off-canvas-body">
+            <div class="support-layout">
+                <div class="ticket-list">
+                    <button id="new-support-ticket-btn" class="book-btn" style="width: 100%; margin-bottom: 1rem;">Create New Ticket</button>
+                    <div id="ticket-list-container">
+                        <p>Loading your tickets...</p>
+                    </div>
+                </div>
+                <div class="ticket-view">
+                    <div id="ticket-conversation-container">
+                        <p>Select a ticket to see the conversation.</p>
+                    </div>
+                    <form id="support-chat-form" class="chat-input" style="display: none;">
+                        <input type="text" id="support-chat-input" placeholder="Type your reply..." required>
+                        <button type="submit" class="btn">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     
-     <!-- Booking Detail & Chat Modal -->
     <div id="booking-detail-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header"><h2>Booking Details</h2><button class="close-panel-btn">&times;</button></div>
@@ -193,7 +281,6 @@
         </div>
     </div>
 
-    <!-- NEW: Edit Profile Modal -->
     <div id="edit-profile-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
@@ -203,6 +290,45 @@
             <div class="modal-body" id="edit-profile-body">
                 <!-- Content injected by JS -->
             </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Checkout</h2>
+                <button id="close-checkout-modal" class="close-btn">&times;</button>
+            </div>
+            <div id="checkout-body" class="modal-body">
+                <!-- Checkout summary and options will be injected here -->
+            </div>
+            <div class="modal-footer checkout-footer">
+                <div class="cart-total">
+                    <span>Total:</span>
+                    <span id="checkout-total-price">R0.00</span>
+                </div>
+                <button id="confirm-order-btn" class="book-btn">Confirm Order</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-support-ticket-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>New Support Ticket</h2>
+                <button id="close-new-support-ticket-modal" class="close-btn">&times;</button>
+            </div>
+            <form id="new-support-ticket-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="ticket-message">Please describe your issue or question</label>
+                        <textarea id="ticket-message" name="message" required placeholder="Be as detailed as possible..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="book-btn">Send Ticket</button>
+                </div>
+            </form>
         </div>
     </div>
 

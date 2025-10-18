@@ -197,15 +197,15 @@ main { padding-top: 0; }
     right: -8px; /* Adjusted for better centering */
     background-color: var(--primary);
     color: white;
-    font-size: 0.7em;
-    border-radius: 50%;
+    font-size: 0.75rem;
+    border-radius: 50px;
     width: 20px; /* Increased size for better visibility */
-    height: 20px;
+    min-width: 20px;
+    padding: 0 4px;
     display: flex; /* Use flexbox for perfect centering */
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    line-height: 1; /* Ensure text is vertically centered */
 }
 
 /* Profile Dropdown */
@@ -420,9 +420,6 @@ input:checked+.slider:before {
 
 #about,
 #contact {
-    max-width: 700px;
-    margin-left: auto;
-    margin-right: auto;
     text-align: center;
 }
 
@@ -746,8 +743,13 @@ input:checked+.slider:before {
     margin-bottom: 1rem;
 }
 
-#checkout-btn {
+#checkout-btn, #confirm-order-btn {
     width: 100%;
+}
+
+#checkout-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Favorite Button in Detail Modal */
@@ -915,6 +917,11 @@ input:checked+.slider:before {
     cursor: not-allowed;
 }
 
+.payment-selector label[for="radio-delivery"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 #confirm-booking-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -970,13 +977,11 @@ input:checked+.slider:before {
 .status-badge.status-missed, .status-badge.status-expired { background: #e2e3e5; color: #383d41; }
 
 
-/* Booking Detail Chat Modal */
+/* Checkout & Booking Detail Chat Modal */
+#checkout-body,
 #booking-detail-body {
-    display: flex; /* Changed to flex for better layout */
-    flex-direction: column;
-    gap: 1rem;
+    display: block; /* Override flex for a top-to-bottom layout */
     padding: 1.5rem;
-    min-height: 200px;
 }
 
 .dark-mode .chat-messages-container {
@@ -1112,7 +1117,6 @@ input:checked+.slider:before {
     font-style: italic;
     font-size: 0.9em;
 }
-
 
 /* Edit Profile Modal */
 #edit-profile-body {
@@ -1595,3 +1599,211 @@ input:checked+.slider:before {
     color: var(--text-secondary);
 }
 
+/* --- NEW: TOAST NOTIFICATION STYLES --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background-color: var(--dark);
+    color: var(--white);
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transform: translateX(calc(100% + 20px));
+    transition: transform 0.4s ease-in-out;
+    opacity: 0;
+}
+
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast.success {
+    background: linear-gradient(90deg, #155724, #28a745);
+}
+
+.toast.error {
+     background: linear-gradient(90deg, #721c24, #dc3545);
+}
+
+/* --- WIDE OFF-CANVAS FOR SUPPORT PANEL --- */
+.off-canvas.wide {
+    width: 800px;
+    max-width: 95vw;
+    right: -800px;
+}
+.off-canvas.wide.open {
+    right: 0;
+}
+
+/* --- NEW: SUPPORT TICKET LAYOUT & STYLES --- */
+.support-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1rem;
+    height: 100%;
+}
+.ticket-list {
+    border-right: 1px solid var(--border-color);
+    padding-right: 1rem;
+    overflow-y: auto;
+}
+.ticket-item {
+    background: var(--soft);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    transition: all 0.2s ease;
+}
+.ticket-item:hover {
+    background-color: var(--accent);
+}
+.ticket-item.active {
+    border-left-color: var(--primary);
+    background-color: var(--accent);
+}
+.ticket-item p {
+    margin: 0 0 0.5rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ticket-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+#ticket-conversation-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* --- NEW: STYLING FOR SUPPORT CHAT FORM --- */
+#support-chat-form {
+    display: flex;
+    gap: 0.5rem;
+}
+#support-chat-form input {
+    flex-grow: 1;
+    border: 1px solid var(--border-color);
+    padding: 0.7rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+#support-chat-form button {
+    background: var(--muted);
+    color: white;
+    border: none;
+    padding: 0 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+/* --- NEW STYLES FOR REDESIGNED SECTIONS --- */
+
+/* About Us Section */
+#about .about-us-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 3rem;
+    align-items: center;
+    text-align: left;
+}
+/* ADDED: Parallax-like effect for the about section */
+#about {
+    background-image: url('/images/bg.jpg');
+    background-attachment: fixed;
+    background-position: center;
+    background-size: cover;
+    position: relative;
+    perspective: 1px;
+    transform-style: preserve-3d;
+    overflow: hidden; /* This clips the background image */
+    z-index: 0;
+}
+#about .about-us-image img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+}
+#about .about-us-content h3 {
+    font-size: 2rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+}
+#about .about-us-content p {
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+
+/* Contact Section */
+/* ADDED: Background color for contact section */
+#contact {
+    background-color: var(--soft);
+}
+
+#contact .contact-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: flex-start;
+    text-align: left;
+}
+#contact .contact-form-container h3, #contact .contact-info-container h3 {
+    font-size: 1.5rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+}
+#contact .contact-form-container p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+#contact .map-container {
+    width: 100%;
+    height: 300px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 900px) {
+    #about .about-us-layout, #contact .contact-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.checkout-footer {
+    display: flex;
+    justify-content: space-between; /* Pushes items to opposite ends */
+    align-items: center; /* Vertically aligns them */
+    padding: 1rem 1.5rem;
+    gap: 1rem; /* Adds space between items if they get close */
+}
+
+.checkout-footer .cart-total {
+    margin-bottom: 0; /* Removes extra space below the total */
+    font-size: 1.2rem;
+}
+
+.checkout-footer #confirm-order-btn {
+    width: auto; /* Allows the button to size based on its text */
+    flex-shrink: 0; /* Prevents the button from shrinking on small screens */
+}

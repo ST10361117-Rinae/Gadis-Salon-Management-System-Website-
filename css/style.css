@@ -685,6 +685,21 @@ margin-left: 0;
     transform: scale(1.05);
 }
 
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition);
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
 /* Profile Form Container */
 .profile-form-container {
     max-width: 600px;
@@ -2336,3 +2351,65 @@ thead th.sorted i {
 /* --- END OF NEW SECTION --- */
 
 
+#toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: #fff;
+            background-color: #333; /* Default background */
+            font-size: 1em;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Different types of toasts */
+        .toast.toast-success {
+            background-color: #27ae60; 
+        }
+
+        .toast.toast-error {
+            background-color: #c0392b; 
+        }
+
+        .toast.toast-warning {
+            background-color: #f39c12;
+        }
+        /* UPDATED: More powerful styles to ensure modals are visible */
+        .modal-overlay.is-visible {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 9999 !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: rgba(0, 0, 0, 0.6) !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        .modal-overlay.is-visible .modal {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: scale(1) !important;
+            background-color: white !important;
+        }

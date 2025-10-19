@@ -119,6 +119,33 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentAdminId = null;
     const functions = getFunctions(auth.app); // Initialize Firebase Functions
 
+    // --- ADDED: Custom Toast Notification Function to replace alert() ---
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            console.error("Toast container not found!");
+            return;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+
+        toastContainer.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        // Animate out and remove after a delay
+        setTimeout(() => {
+            toast.classList.remove('show');
+            // Remove the element after the transition is complete
+            toast.addEventListener('transitionend', () => toast.remove());
+        }, 3000);
+    }
+
     // --- 1. Security Check and Initial Data Load ---
     onAuthStateChanged(auth, async user => {
         if (user) {
@@ -498,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // --- VALIDATION 1: Check for product name ---
         if (!productName) {
-            alert("Please enter a product name.");
+            showToast("Please enter a product name.", "warning");
             return;
         }
 
@@ -507,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- VALIDATION 2: Check if there's at least one variant ---
         if (variantGroups.length === 0) {
-            alert("Please add at least one product variant.");
+             showToast("Please add at least one product variant.", "warning");
             return;
         }
 
@@ -518,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const stock = group.querySelector('.variant-stock').value;
 
             if (!size || !price || !stock) {
-                alert("Please ensure all variant fields (Size, Price, Stock) are filled out.");
+                  showToast("Please ensure all variant fields (Size, Price, Stock) are filled out.", "warning");
                 return;
             }
             variants.push({
@@ -530,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // --- VALIDATION 4: Require an image for NEW products ---
         if (!productId && !newProductImageFile) {
-            alert("Please select an image for the new product.");
+            showToast("Please select an image for the new product.", "warning");
             return;
         }
 
@@ -563,12 +590,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await setDoc(doc(db, "products", finalProductId), productData);
             
-            alert('Product saved successfully!');
+              showToast('Product saved successfully!', 'success');
             closeProductModal();
 
         } catch (error) {
             console.error("Error saving product:", error);
-            alert(`Failed to save product: ${error.message}`);
+           showToast(`Failed to save product: ${error.message}`, 'error');
         }
     });
 
@@ -599,11 +626,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storageRef = ref(storage, `products/${productId}`);
                 await deleteObject(storageRef).catch(err => console.warn("Image not found, skipping delete.", err));
                 
-                alert("Product deleted successfully.");
+               showToast("Product deleted successfully.", "success");
                 closeProductModal();
             } catch (error) {
                 console.error("Error deleting product:", error);
-                alert("Failed to delete product.");
+                showToast("Failed to delete product.", "error");
             }
         }
     });
@@ -721,10 +748,10 @@ document.addEventListener('DOMContentLoaded', () => {
             availableStylistIds.push(checkbox.value);
         });
 
-        if (!hairstyleName) { alert("Please enter a hairstyle name."); return; }
-        if (!hairstylePrice || !hairstyleDuration) { alert("Please enter a price and duration."); return; }
-        if (availableStylistIds.length === 0) { alert("Please select at least one available stylist."); return; }
-        if (!newHairstyleImageFile && !hairstyleId) { alert("Please select an image for a new hairstyle."); return; }
+        if (!hairstyleName) { showToast("Please enter a hairstyle name.", "warning"); return; }
+        if (!hairstylePrice || !hairstyleDuration) { showToast("Please enter a price and duration.", "warning"); return; }
+        if (availableStylistIds.length === 0) { showToast("Please select at least one available stylist.", "warning"); return; }
+        if (!newHairstyleImageFile && !hairstyleId) { showToast("Please select an image for a new hairstyle.", "warning"); return; }
         
         try {
             let imageUrlToSave = hairstyleModalImg.src;
@@ -752,11 +779,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             await setDoc(doc(db, "hairstyles", finalHairstyleId), hairstyleData);
-            alert('Hairstyle saved successfully!');
+             showToast('Hairstyle saved successfully!', 'success');
             closeHairstyleModal();
         } catch (error) {
             console.error("Error saving hairstyle:", error);
-            alert(`Failed to save hairstyle: ${error.message}`);
+              showToast(`Failed to save hairstyle: ${error.message}`, 'error');
         }
     });
 
@@ -772,11 +799,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storageRef = ref(storage, `hairstyles/${hairstyleId}`);
                 await deleteObject(storageRef).catch(err => console.warn("Image not found, skipping delete.", err));
                 
-                alert("Hairstyle deleted successfully.");
+                showToast("Hairstyle deleted successfully.", "success");
                 closeHairstyleModal();
             } catch (error) {
                 console.error("Error deleting hairstyle:", error);
-                alert("Failed to delete hairstyle.");
+                 showToast("Failed to delete hairstyle.", "error");
             }
         }
     });
@@ -1092,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             adminSupportChatInput.value = '';
         } catch (error) {
             console.error("Error sending support reply:", error);
-            alert("Failed to send reply.");
+             showToast("Failed to send reply.", "error");
         }
     });
 
@@ -1107,26 +1134,37 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- 15. Event Listeners for Closing a Ticket ---
     closeTicketBtn.addEventListener('click', () => {
+        console.log("Close Ticket button clicked. Current open ticket ID:", currentOpenTicketId);
         if (currentOpenTicketId) {
-            closeTicketModalOverlay.style.display = 'flex';
+            console.log("Opening close ticket confirmation modal...");
+            closeTicketModalOverlay.classList.add('is-visible');
+        } else {
+            console.warn("Close Ticket button clicked, but no ticket is currently open.");
         }
     });
     
     closeTicketModalCloseBtn.addEventListener('click', () => {
-        closeTicketModalOverlay.style.display = 'none';
+        closeTicketModalOverlay.classList.remove('is-visible');
     });
 
     confirmCloseTicketBtn.addEventListener('click', async () => {
-        if (!currentOpenTicketId) return;
+        console.log("Confirm Close Ticket button clicked for ticket ID:", currentOpenTicketId);
+        if (!currentOpenTicketId) {
+            console.error("Confirmation button clicked, but currentOpenTicketId is missing.");
+            return;
+        }
         try {
+            console.log("Attempting to update Firestore document...");
             await updateDoc(doc(db, "support_messages", currentOpenTicketId), { status: "Closed" });
-            alert("Ticket has been closed.");
-            closeTicketModalOverlay.style.display = 'none';
+            console.log("Firestore document updated successfully.");
+            showToast("Ticket has been closed.", "success");
+            closeTicketModalOverlay.classList.remove('is-visible');
             // Refresh the conversation view
+            console.log("Refreshing conversation view for the closed ticket.");
             openAdminSupportConversation(currentOpenTicketId, 'Closed');
         } catch (error) {
             console.error("Error closing ticket:", error);
-            alert("Failed to close ticket.");
+            showToast("Failed to close ticket.", "error");
         }
     });
 
@@ -1167,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Basic Validation
         if (!newName || !/^\d{10}$/.test(newPhone)) {
-            alert("Please enter a valid name and a 10-digit phone number.");
+            showToast("Please enter a valid name and a 10-digit phone number.", "warning");
             return;
         }
 
@@ -1187,14 +1225,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 phone: newPhone,
             });
 
-            alert('Profile updated successfully!');
+           showToast('Profile updated successfully!', 'success');
             // Refresh local data
             const userDoc = await getDoc(doc(db, "users", currentAdminId));
             if(userDoc.exists()) currentAdminData = userDoc.data();
 
         } catch (error) {
             console.error("Error updating admin profile:", error);
-            alert("Failed to update profile.");
+             showToast("Failed to update profile.", "error");
         }
     });
 
@@ -1207,10 +1245,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storageRef = ref(storage, `profile_pictures/${currentAdminId}`);
                 await deleteObject(storageRef).catch(err => console.warn("Old photo not found, skipping delete.", err));
                 adminProfileImg.src = 'https://placehold.co/150x150/D67A84/FFFFFF?text=A';
-                alert('Profile picture removed.');
+                 showToast('Profile picture removed.', 'success');
             } catch (error) {
                 console.error("Error removing picture:", error);
-                alert("Failed to remove picture.");
+                 showToast("Failed to remove picture.", "error");
             }
         }
     });
@@ -1287,17 +1325,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const setUserRole = httpsCallable(functions, 'setUserRole');
                 await setUserRole({ userId: userId, role: userData.role });
 
-                alert('User updated successfully!');
+                 showToast('User updated successfully!', 'success');
                 closeUserModal();
             } catch (error) {
                 console.error("Error updating user:", error);
-                alert(`Failed to update user: ${error.message}`);
+               showToast(`Failed to update user: ${error.message}`, 'error');
             }
         } else {
             // Create new user (requires password)
             const password = userForm.password.value;
             if (password.length < 6) {
-                alert('Password must be at least 6 characters long.');
+                 showToast('Password must be at least 6 characters long.', 'warning');
                 return;
             }
             try {
@@ -1316,11 +1354,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     await updateDoc(doc(db, "users", newUserId), { imageUrl: downloadURL });
                 }
 
-                alert('User created successfully!');
+                showToast('User created successfully!', 'success');
                 closeUserModal();
             } catch(error) {
                 console.error("Error creating user:", error);
-                alert(`Failed to create user: ${error.message}`);
+                showToast(`Failed to create user: ${error.message}`, 'error');
             }
         }
         closeUserModal();
@@ -1346,10 +1384,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storageRef = ref(storage, `profile_pictures/${userId}`);
                 await deleteObject(storageRef).catch(err => console.warn("Old photo not found, skipping delete.", err));
                 userModalImg.src = 'https://placehold.co/150x150/D67A84/FFFFFF?text=G';
-                alert('Profile picture removed.');
+                showToast('Profile picture removed.', 'success');
             } catch (error) {
                 console.error("Error removing picture:", error);
-                alert("Failed to remove picture.");
+               showToast("Failed to remove picture.", "error");
             }
         }
     });
@@ -1359,10 +1397,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const deleteUserFn = httpsCallable(functions, 'deleteUser');
             await deleteUserFn({ userId: userId });
-            alert('User deleted successfully.');
+            showToast('User deleted successfully.', 'success');
         } catch (error) {
             console.error("Error deleting user:", error);
-            alert(`Failed to delete user: ${error.message}`);
+            showToast(`Failed to delete user: ${error.message}`, 'error');
         }
     }
 });

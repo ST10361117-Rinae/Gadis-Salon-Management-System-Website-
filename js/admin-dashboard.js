@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const metricStylists = document.getElementById('metric-stylists');
     const metricCustomers = document.getElementById('metric-customers');
     const metricProducts = document.getElementById('metric-products');
+    const metricLowStock = document.getElementById('metric-low-stock');
+    const metricSoldOut = document.getElementById('metric-sold-out');
 
     // User Management Element Selections ---
     const usersTableBody = document.getElementById('users-table-body');
@@ -78,6 +80,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookingModalTime = document.getElementById('booking-modal-time');
     const bookingModalChatMessages = document.getElementById('booking-modal-chat-messages');
 
+    // --- NEW: Booking Modal Edit/Delete Elements ---
+    const bookingModalFooter = document.getElementById('booking-modal-footer');
+    const bookingModalViewDetails = document.getElementById('booking-modal-view-details');
+    const bookingModalEditForm = document.getElementById('booking-modal-edit-form');
+    const bookingModalEditBtn = document.getElementById('booking-modal-edit-btn');
+    const bookingModalDeleteBtn = document.getElementById('booking-modal-delete-btn');
+    const bookingModalSaveBtn = document.getElementById('booking-modal-save-btn');
+    const bookingModalCancelBtn = document.getElementById('booking-modal-cancel-btn');
+    const bookingModalStylistSelect = document.getElementById('booking-modal-stylist-select');
+    const bookingModalDateInput = document.getElementById('booking-modal-date-input');
+    const bookingModalTimeInput = document.getElementById('booking-modal-time-input');
+    const bookingModalStatusSelect = document.getElementById('booking-modal-status-select');
+
+
     // Order Details Modal Element Selections ---
     const ordersContainer = document.getElementById('orders-container');
     const orderDetailsModalOverlay = document.getElementById('order-details-modal-overlay');
@@ -86,6 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const orderModalCustomer = document.getElementById('order-modal-customer');
     const orderModalTotal = document.getElementById('order-modal-total');
     const orderModalItemsList = document.getElementById('order-modal-items-list');
+
+    // --- NEW: Order Modal Edit/Delete Elements ---
+    const orderModalStatusSelect = document.getElementById('order-modal-status-select');
+    const orderModalSaveStatusBtn = document.getElementById('order-modal-save-status-btn');
+    const orderModalDeleteBtn = document.getElementById('order-modal-delete-btn');
+
+        // --- NEW: Time Off Page Elements ---
+    const timeoffTableBody = document.getElementById('timeoff-table-body');
 
     // Support System Element Selections ---
     const adminTicketListContainer = document.getElementById('admin-ticket-list-container');
@@ -105,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Variables for sorting ---
     let allUsers = []; // This will hold the raw user data from Firestore
+    let allStylists = [];
     let currentSortKey = 'name';
     let currentSortOrder = 'asc'; // 'asc' or 'desc'
     let newProfileImageFile = null;
@@ -115,6 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOpenTicketId = null;
     let currentAdminData = null;
     let newAdminProfileImageFile = null;
+    let currentEditingBookingId = null; // --- NEW
+    let currentEditingOrderId = null; // --- NEW
 
     let currentAdminId = null;
     const functions = getFunctions(auth.app); // Initialize Firebase Functions
@@ -158,6 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentAdminId = user.uid;
                 currentAdminData = userDoc.data();
                 console.log("Admin authenticated:", currentAdminId);
+                // --- NEW: Fetch stylists once for dropdowns ---
+                await fetchAllStylists(); 
                 // Load the main dashboard data
                 fetchDashboardMetrics();
             } else {
@@ -187,6 +216,17 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(targetId);
         });
     });
+
+    // --- NEW: Helper function to fetch all stylists and cache them ---
+    async function fetchAllStylists() {
+        allStylists = [];
+        const q = query(collection(db, "users"), where("role", "==", "WORKER"));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(doc => {
+            allStylists.push({ id: doc.id, ...doc.data() });
+        });
+        console.log("Cached all stylists:", allStylists);
+    }
     
     function handleNavigation(targetId) {
         const targetPage = document.getElementById(`${targetId}-page`);
@@ -222,6 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'orders': 
                 fetchAllOrders(); 
                 break;
+            case 'timeoff':
+                fetchTimeOffRequests();
+                break;
             case 'support': 
                 fetchAllSupportTickets(); 
                 break;
@@ -243,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hairstyles: { title: 'Hairstyle Management', subtitle: 'Manage your salon\'s hairstyle services.' },
             bookings: { title: 'All Bookings', subtitle: 'View the complete history of all appointments.' },
             orders: { title: 'All Product Orders', subtitle: 'View the complete history of all product sales.' },
+            timeoff: { title: 'Time Off Requests', subtitle: 'Approve or reject stylist time off.' },
             support: { title: 'Support Tickets', subtitle: 'Respond to and manage user support requests.' },
             profile: { title: 'My Profile', subtitle: 'Update your personal admin details.' }
         };
@@ -273,15 +317,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         onSnapshot(collection(db, "products"), (snapshot) => {
             let totalStock = 0;
+            let lowStockCount = 0;
+            let soldOutCount = 0;
+
             snapshot.forEach(doc => {
                 const product = doc.data();
                 if (product.variants && Array.isArray(product.variants)) {
                     product.variants.forEach(variant => {
-                        totalStock += variant.stock || 0;
+                        const stock = variant.stock || 0;
+                        totalStock += stock;
+                        if (stock === 0) {
+                            soldOutCount++;
+                        } else if (stock <= 10) { // Assuming <= 10 is "low stock"
+                            lowStockCount++;
+                        }
                     });
                 }
             });
             metricProducts.textContent = totalStock;
+            metricLowStock.textContent = lowStockCount; // --- NEW
+            metricSoldOut.textContent = soldOutCount; // --- NEW
         });
     }
 
@@ -827,14 +882,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let imageUrl = 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
                 if (booking.hairstyleId) {
-                    const hairstyleDoc = await getDoc(doc(db, "hairstyles", booking.hairstyleId));
-                    if (hairstyleDoc.exists()) {
-                        imageUrl = hairstyleDoc.data().imageUrl;
+                    try {
+                        const hairstyleDoc = await getDoc(doc(db, "hairstyles", booking.hairstyleId));
+                        if (hairstyleDoc.exists()) {
+                            imageUrl = hairstyleDoc.data().imageUrl;
+                        }
+                    } catch (e) {
+                        console.warn("Could not fetch hairstyle image for booking: ", e.message);
                     }
                 }
                 
+                // --- NEW: Added quick delete button (btn-card-delete) ---
                 return `
                     <div class="booking-card" data-booking-id="${booking.id}">
+                        <button class="btn-card-delete delete-booking-quick" data-id="${booking.id}">&times;</button>
                         <img src="${imageUrl}" alt="${booking.serviceName}">
                         <div class="card-content">
                             <h3>${booking.serviceName}</h3>
@@ -854,11 +915,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function openAdminBookingModal(bookingId) {
- 
+   
         if (!bookingId) {
             console.error("openAdminBookingModal was called with a null or empty bookingId.");
             return;
         }
+
+        // --- NEW: Reset modal to view mode ---
+        bookingModalViewDetails.style.display = 'block';
+        bookingModalEditForm.style.display = 'none';
+        bookingModalFooter.style.display = 'flex';
+        bookingModalEditBtn.style.display = 'inline-block';
+        bookingModalDeleteBtn.style.display = 'inline-block';
+        bookingModalSaveBtn.style.display = 'none';
+        bookingModalCancelBtn.style.display = 'none';
+        
+        currentEditingBookingId = bookingId; // --- NEW: Store ID
 
         bookingDetailsModalOverlay.style.display = 'flex';
         bookingDetailsModalOverlay.style.opacity = '1';
@@ -869,17 +941,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!bookingDoc.exists()) return;
 
         const booking = bookingDoc.data();
+        
+        // --- Populate View Mode ---
         bookingModalServiceName.textContent = booking.serviceName;
         bookingModalCustomer.textContent = booking.customerName;
         bookingModalStylist.textContent = booking.stylistName || 'Not Assigned';
         bookingModalDate.textContent = booking.date;
         bookingModalTime.textContent = booking.time;
+        
+        // --- NEW: Populate Edit Mode (hidden) ---
+        populateStylistDropdown(booking.stylistId);
+        bookingModalDateInput.value = booking.date;
+        bookingModalTimeInput.value = booking.time; // This assumes time is saved in a format the input likes
+        bookingModalStatusSelect.value = booking.status;
+
 
         const messagesRef = collection(db, "bookings", bookingId, "messages");
         const q = query(messagesRef, orderBy("timestamp"));
         unsubscribeBookingChat = onSnapshot(q, (snapshot) => {
             let messagesHtml = '';
-           
+            
             snapshot.forEach(messageDoc => {
                 const message = messageDoc.data();
                 const bubbleClass = message.senderUid === booking.customerId ? 'customer' : 'stylist';
@@ -898,24 +979,119 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function closeAdminBookingModal() {
+    // --- NEW: Helper function to populate stylist dropdown ---
+    function populateStylistDropdown(selectedStylistId) {
+        let optionsHtml = '<option value="">-- Select Stylist --</option>';
+        allStylists.forEach(stylist => {
+            const selected = stylist.id === selectedStylistId ? 'selected' : '';
+            optionsHtml += `<option value="${stylist.id}" ${selected}>${stylist.name}</option>`;
+        });
+        bookingModalStylistSelect.innerHTML = optionsHtml;
+    }
+
+   function closeAdminBookingModal() {
         bookingDetailsModalOverlay.style.opacity = '0';
         setTimeout(() => { bookingDetailsModalOverlay.style.display = 'none'; }, 200);
         if (unsubscribeBookingChat) unsubscribeBookingChat();
+        currentEditingBookingId = null; // --- NEW
+    }
+
+    // --- NEW: Function to delete a booking ---
+    async function deleteBooking(bookingId) {
+        if (!bookingId) return;
+        try {
+            await deleteDoc(doc(db, "bookings", bookingId));
+            // Note: This does not delete the 'messages' subcollection.
+            // A Cloud Function is required for that.
+            showToast("Booking deleted successfully.", "success");
+        } catch (error) {
+            console.error("Error deleting booking:", error);
+            showToast("Failed to delete booking.", "error");
+        }
     }
 
     // --- 11. Event Listeners for Booking Management ---
     bookingModalCloseBtn.addEventListener('click', closeAdminBookingModal);
 
+    // --- MODIFIED: To handle quick delete ---
     bookingsContainer.addEventListener('click', (e) => {
+        // --- NEW: Handle quick delete ---
+        if (e.target.classList.contains('delete-booking-quick')) {
+            e.stopPropagation(); // Stop modal from opening
+            const bookingId = e.target.dataset.id;
+            if (confirm("Are you sure you want to permanently delete this booking?")) {
+                deleteBooking(bookingId);
+            }
+            return;
+        }
+
         const card = e.target.closest('.booking-card');
         if (card) {
             openAdminBookingModal(card.dataset.bookingId);
         }
     });
+    
+    // --- NEW: Event listeners for booking edit/delete buttons ---
+    bookingModalEditBtn.addEventListener('click', () => {
+        bookingModalViewDetails.style.display = 'none';
+        bookingModalEditForm.style.display = 'block';
+        bookingModalEditBtn.style.display = 'none';
+        bookingModalDeleteBtn.style.display = 'none';
+        bookingModalSaveBtn.style.display = 'inline-block';
+        bookingModalCancelBtn.style.display = 'inline-block';
+    });
+
+    bookingModalCancelBtn.addEventListener('click', () => {
+        bookingModalViewDetails.style.display = 'block';
+        bookingModalEditForm.style.display = 'none';
+        bookingModalEditBtn.style.display = 'inline-block';
+        bookingModalDeleteBtn.style.display = 'inline-block';
+        bookingModalSaveBtn.style.display = 'none';
+        bookingModalCancelBtn.style.display = 'none';
+    });
+    
+    bookingModalDeleteBtn.addEventListener('click', () => {
+        if (confirm("Are you sure you want to permanently delete this booking?")) {
+            deleteBooking(currentEditingBookingId);
+            closeAdminBookingModal();
+        }
+    });
+
+    bookingModalSaveBtn.addEventListener('click', async () => {
+        if (!currentEditingBookingId) return;
+
+        try {
+            const selectedStylistOption = bookingModalStylistSelect.options[bookingModalStylistSelect.selectedIndex];
+            const stylistId = selectedStylistOption.value;
+            const stylistName = stylistId ? selectedStylistOption.text : "Not Assigned";
+
+            const dataToUpdate = {
+                stylistId: stylistId,
+                stylistName: stylistName,
+                date: bookingModalDateInput.value,
+                time: bookingModalTimeInput.value, // You may need to validate this format
+                status: bookingModalStatusSelect.value,
+            };
+
+            await updateDoc(doc(db, "bookings", currentEditingBookingId), dataToUpdate);
+            showToast("Booking updated successfully!", "success");
+            
+            // Refresh the view mode data
+            bookingModalStylist.textContent = stylistName;
+            bookingModalDate.textContent = dataToUpdate.date;
+            bookingModalTime.textContent = dataToUpdate.time;
+            
+            // Switch back to view mode
+            bookingModalCancelBtn.click();
+
+        } catch (error) {
+            console.error("Error updating booking:", error);
+            showToast("Failed to update booking.", "error");
+        }
+    });
 
     // 12. All logic for Viewing Product Orders ---
-
+// --- MODIFIED: Added quick delete button ---
     function fetchAllOrders() {
         ordersContainer.innerHTML = '<p>Loading all orders...</p>';
         const q = query(collection(db, "product_orders"), orderBy("timestamp", "desc"));
@@ -937,8 +1113,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
+                // --- NEW: Added quick delete button (btn-card-delete) ---
                 ordersHtml += `
                     <div class="order-card" data-order-id="${order.id}">
+                        <button class="btn-card-delete delete-order-quick" data-id="${order.id}">&times;</button>
                         <div class="order-card-images">${imagesHtml}</div>
                         <div class="card-content">
                             <h3>Order #${order.id.slice(-6)}</h3>
@@ -954,8 +1132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+     // --- MODIFIED: To store order ID and populate status ---
     async function openAdminOrderModal(orderId) {
         if (!orderId) return;
+        currentEditingOrderId = orderId; // --- NEW
         orderDetailsModalOverlay.style.display = 'flex';
         orderDetailsModalOverlay.style.opacity = '1';
 
@@ -965,6 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orderModalTitle.textContent = `Order Details #${orderId.slice(-6)}`;
             orderModalCustomer.textContent = order.customerName;
             orderModalTotal.textContent = `R${order.totalPrice.toFixed(2)}`;
+            orderModalStatusSelect.value = order.status; // --- NEW
 
             let itemsHtml = '';
             order.items.forEach(item => {
@@ -982,18 +1163,143 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function closeAdminOrderModal() {
+   function closeAdminOrderModal() {
         orderDetailsModalOverlay.style.opacity = '0';
         setTimeout(() => { orderDetailsModalOverlay.style.display = 'none'; }, 200);
+        currentEditingOrderId = null; // --- NEW
+    }
+
+    // --- NEW: Function to delete an order ---
+    async function deleteOrder(orderId) {
+        if (!orderId) return;
+        try {
+            await deleteDoc(doc(db, "product_orders", orderId));
+            showToast("Order deleted successfully.", "success");
+        } catch (error) {
+            console.error("Error deleting order:", error);
+            showToast("Failed to delete order.", "error");
+        }
     }
 
     // 13. Event Listeners for Order Management ---
     orderModalCloseBtn.addEventListener('click', closeAdminOrderModal);
 
+    // --- MODIFIED: To handle quick delete ---
     ordersContainer.addEventListener('click', (e) => {
+        // --- NEW: Handle quick delete ---
+        if (e.target.classList.contains('delete-order-quick')) {
+            e.stopPropagation(); // Stop modal from opening
+            const orderId = e.target.dataset.id;
+            if (confirm("Are you sure you want to permanently delete this order?")) {
+                deleteOrder(orderId);
+            }
+            return;
+        }
+
         const card = e.target.closest('.order-card');
         if (card) {
             openAdminOrderModal(card.dataset.orderId);
+        }
+    });
+
+    // --- NEW: Event listeners for order modal buttons ---
+    orderModalSaveStatusBtn.addEventListener('click', async () => {
+        if (!currentEditingOrderId) return;
+        const newStatus = orderModalStatusSelect.value;
+        try {
+            await updateDoc(doc(db, "product_orders", currentEditingOrderId), {
+                status: newStatus
+            });
+            showToast("Order status updated!", "success");
+        } catch (error) {
+            console.error("Error updating order status:", error);
+            showToast("Failed to update status.", "error");
+        }
+    });
+
+    orderModalDeleteBtn.addEventListener('click', () => {
+        if (confirm("Are you sure you want to permanently delete this order?")) {
+            deleteOrder(currentEditingOrderId);
+            closeAdminOrderModal();
+        }
+    });
+
+    // --- NEW: 13.5. All logic for Time Off Management ---
+
+    function fetchTimeOffRequests() {
+        // Based on your cloud function, the collection is "timeOffRequests"
+        const q = query(collection(db, "timeOffRequests"), orderBy("startDate", "desc"));
+        
+        onSnapshot(q, async (snapshot) => {
+            if (snapshot.empty) {
+                timeoffTableBody.innerHTML = '<tr><td colspan="6">No time off requests found.</td></tr>';
+                return;
+            }
+
+            const requestPromises = snapshot.docs.map(async (requestDoc) => {
+                const request = { id: requestDoc.id, ...requestDoc.data() };
+                
+                // Get stylist name
+                let stylistName = "Unknown Stylist";
+                try {
+                    const stylistDoc = await getDoc(doc(db, "users", request.stylistId));
+                    if (stylistDoc.exists()) {
+                        stylistName = stylistDoc.data().name;
+                    }
+                } catch (e) {
+                    console.warn("Could not fetch stylist name for time off request:", e.message);
+                }
+
+                const statusClass = `status-${request.status.toLowerCase()}`;
+                let actionsHtml = `<span class="role-badge ${statusClass}">${request.status}</span>`;
+
+                // If status is pending, show action buttons
+                if (request.status === 'pending') {
+                    actionsHtml = `
+                        <button class="btn-approve" data-id="${request.id}">Approve</button>
+                        <button class="btn-reject" data-id="${request.id}">Reject</button>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td>${stylistName}</td>
+                        <td>${request.startDate}</td>
+                        <td>${request.endDate}</td>
+                        <td>${request.reason}</td>
+                        <td><span class="status-badge ${statusClass}">${request.status}</span></td>
+                        <td class="action-buttons">${actionsHtml}</td>
+                    </tr>
+                `;
+            });
+
+            timeoffTableBody.innerHTML = (await Promise.all(requestPromises)).join('');
+        });
+    }
+
+    // --- NEW: Event listener for time off action buttons ---
+    timeoffTableBody.addEventListener('click', async (e) => {
+        const target = e.target;
+        const requestId = target.dataset.id;
+        if (!requestId) return;
+
+        let newStatus = null;
+        if (target.classList.contains('btn-approve')) {
+            newStatus = 'approved';
+        } else if (target.classList.contains('btn-reject')) {
+            newStatus = 'rejected';
+        }
+
+        if (newStatus) {
+            try {
+                await updateDoc(doc(db, "timeOffRequests", requestId), {
+                    status: newStatus
+                });
+                showToast(`Request has been ${newStatus}.`, "success");
+            } catch (error) {
+                console.error("Error updating time off status:", error);
+                showToast("Failed to update status.", "error");
+            }
         }
     });
 

@@ -69,6 +69,23 @@
                         </div>
                         <!-- --- END NEW METRIC CARDS --- -->
                     </div>
+                    <section class="inventory-list-section fade-in-up" style="--delay: 700ms;">
+                        <h3>Inventory Status</h3>
+                        <div class="inventory-grid">
+                            <div class="inventory-list-card">
+                                <h4>Low Stock Items (<= 10)</h4>
+                                <ul id="low-stock-list">
+                                    <li>Loading...</li>
+                                </ul>
+                            </div>
+                            <div class="inventory-list-card">
+                                <h4>Sold Out Items</h4>
+                                <ul id="sold-out-list">
+                                    <li>Loading...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
                 </section>
 
                 <!-- Users Page -->
@@ -473,6 +490,17 @@
             </div>
             <div class="modal-footer">
                 <button id="confirm-close-ticket-btn" class="btn-danger">Yes, Close Ticket</button>
+            </div>
+        </div>
+    </div>
+
+     <div id="confirmation-modal-overlay" class="modal-overlay">
+        <div id="confirmation-modal">
+            <h3>Confirm Action</h3>
+            <p id="confirmation-message">Are you sure you want to proceed?</p>
+            <div id="confirmation-modal-actions">
+                <button id="confirm-cancel-btn" class="btn-secondary">Cancel</button>
+                <button id="confirm-proceed-btn" class="btn-danger">Proceed</button>
             </div>
         </div>
     </div>

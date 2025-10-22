@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const metricProducts = document.getElementById('metric-products');
     const metricLowStock = document.getElementById('metric-low-stock');
     const metricSoldOut = document.getElementById('metric-sold-out');
+    const lowStockList = document.getElementById('low-stock-list');
+    const soldOutList = document.getElementById('sold-out-list');
 
     // User Management Element Selections ---
     const usersTableBody = document.getElementById('users-table-body');
@@ -127,6 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPictureUpload = document.getElementById('admin-picture-upload');
     const adminRemovePictureBtn = document.getElementById('admin-remove-picture-btn');
 
+    // --- NEW: Confirmation Modal Elements ---
+    const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
+    const confirmationMessage = document.getElementById('confirmation-message');
+    const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+    const confirmProceedBtn = document.getElementById('confirm-proceed-btn');
+
+
     // Variables for sorting ---
     let allUsers = []; // This will hold the raw user data from Firestore
     let allStylists = [];
@@ -142,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let newAdminProfileImageFile = null;
     let currentEditingBookingId = null; // --- NEW
     let currentEditingOrderId = null; // --- NEW
+    let confirmResolve = null;
 
     let currentAdminId = null;
     const functions = getFunctions(auth.app); // Initialize Firebase Functions
@@ -173,6 +183,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
 
+    // --- NEW: Custom Confirmation Modal Function ---
+    function showConfirmationModal(message = "Are you sure you want to proceed?") {
+        return new Promise((resolve) => {
+            confirmationMessage.textContent = message;
+            confirmationModalOverlay.classList.add('visible');
+            confirmResolve = resolve; // Store the resolve function
+        });
+    }
+
+    // --- NEW: Event Listeners for Confirmation Modal Buttons ---
+    confirmCancelBtn.addEventListener('click', () => {
+        confirmationModalOverlay.classList.remove('visible');
+        if (confirmResolve) {
+            confirmResolve(false); // Resolve promise with false (cancelled)
+            confirmResolve = null;
+        }
+    });
+
+    confirmProceedBtn.addEventListener('click', () => {
+        confirmationModalOverlay.classList.remove('visible');
+        if (confirmResolve) {
+            confirmResolve(true); // Resolve promise with true (proceed)
+            confirmResolve = null;
+        }
+    });
+
     // --- 1. Security Check and Initial Data Load ---
     onAuthStateChanged(auth, async user => {
         if (user) {
@@ -189,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 await fetchAllStylists(); 
                 // Load the main dashboard data
                 fetchDashboardMetrics();
+                const hash = window.location.hash.substring(1);
+                handleNavigation(hash || 'dashboard'); 
             } else {
                 // User is not an admin, redirect them
                 console.warn("Unauthorized access attempt by user:", user.uid);
@@ -214,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             const targetId = link.getAttribute('href').substring(1);
             handleNavigation(targetId);
+            window.location.hash = targetId;
         });
     });
 
@@ -232,12 +271,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPage = document.getElementById(`${targetId}-page`);
 
         navLinks.forEach(navLink => navLink.classList.remove('active'));
-        document.querySelector(`.nav-link[href="#${targetId}"]`).classList.add('active');
+        const activeLink = document.querySelector(`.nav-link[href="#${targetId}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        } else {
+            // Default to dashboard if hash is invalid
+            document.querySelector('.nav-link[href="#dashboard"]').classList.add('active');
+            targetId = 'dashboard'; // Reset targetId
+        }
 
         contentPages.forEach(page => page.style.display = 'none');
 
-        if (targetPage) {
-            targetPage.style.display = 'block';
+        //if (targetPage) {
+          //  targetPage.style.display = 'block';
+        //}
+
+        const pageToShow = document.getElementById(`${targetId}-page`);
+        if (pageToShow) {
+            pageToShow.style.display = 'block';
+        } else {
+            // Default to dashboard page if target doesn't exist
+            document.getElementById('dashboard-page').style.display = 'block';
         }
 
         updatePageHeader(targetId);
@@ -271,6 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'profile': 
                 displayAdminProfile(); 
                 break;
+            default: // Handle unknown hash
+                fetchDashboardMetrics(); 
+                break;
         }
 
         if (window.innerWidth <= 560) {
@@ -291,14 +348,14 @@ document.addEventListener('DOMContentLoaded', () => {
             profile: { title: 'My Profile', subtitle: 'Update your personal admin details.' }
         };
 
-        const newTitle = titles[pageId] || { title: 'Admin', subtitle: '' };
+        const newTitle = titles[pageId] || titles['dashboard'];
         pageTitle.textContent = newTitle.title;
         pageSubtitle.textContent = newTitle.subtitle;
     }
 
     // --- 4. Data Fetching for the Main Dashboard ---
     function fetchDashboardMetrics() {
-        // Use onSnapshot for real-time updates!
+        // ... existing metric fetches (bookings, users) ...
         onSnapshot(collection(db, "bookings"), (snapshot) => {
             metricBookings.textContent = snapshot.size;
         });
@@ -315,28 +372,42 @@ document.addEventListener('DOMContentLoaded', () => {
             metricCustomers.textContent = customerCount;
         });
 
+
+        // Fetch Products for stock counts and lists
         onSnapshot(collection(db, "products"), (snapshot) => {
             let totalStock = 0;
             let lowStockCount = 0;
             let soldOutCount = 0;
+            let lowStockHtml = '';
+            let soldOutHtml = '';
 
             snapshot.forEach(doc => {
-                const product = doc.data();
+                const product = { id: doc.id, ...doc.data() }; // Include ID
                 if (product.variants && Array.isArray(product.variants)) {
                     product.variants.forEach(variant => {
                         const stock = variant.stock || 0;
                         totalStock += stock;
+                        const itemName = `${product.name} (${variant.size})`;
+
                         if (stock === 0) {
                             soldOutCount++;
+                            soldOutHtml += `<li>${itemName}</li>`; // --- NEW
                         } else if (stock <= 10) { // Assuming <= 10 is "low stock"
                             lowStockCount++;
+                            lowStockHtml += `<li>${itemName} <span>${stock} left</span></li>`; // --- NEW
                         }
                     });
                 }
             });
+
+            // Update metric cards
             metricProducts.textContent = totalStock;
-            metricLowStock.textContent = lowStockCount; // --- NEW
-            metricSoldOut.textContent = soldOutCount; // --- NEW
+            metricLowStock.textContent = lowStockCount;
+            metricSoldOut.textContent = soldOutCount;
+
+            // --- NEW: Update dashboard lists ---
+            lowStockList.innerHTML = lowStockHtml || '<li>No items are low on stock.</li>';
+            soldOutList.innerHTML = soldOutHtml || '<li>No items are sold out.</li>';
         });
     }
 
@@ -669,11 +740,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- NEW: Event Listener for Deleting a Product ---
-    deleteProductBtn.addEventListener('click', async () => {
+     deleteProductBtn.addEventListener('click', async () => {
         const productId = productIdInput.value;
         if (!productId) return;
 
-        if (confirm("Are you sure you want to permanently delete this product?")) {
+        const confirmed = await showConfirmationModal("Are you sure you want to permanently delete this product?");
+        if (confirmed) {
             try {
                 // Delete Firestore document
                 await deleteDoc(doc(db, "products", productId));
@@ -681,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storageRef = ref(storage, `products/${productId}`);
                 await deleteObject(storageRef).catch(err => console.warn("Image not found, skipping delete.", err));
                 
-               showToast("Product deleted successfully.", "success");
+                showToast("Product deleted successfully.", "success");
                 closeProductModal();
             } catch (error) {
                 console.error("Error deleting product:", error);
@@ -846,7 +918,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const hairstyleId = hairstyleIdInput.value;
         if (!hairstyleId) return;
 
-        if (confirm("Are you sure you want to permanently delete this hairstyle?")) {
+        const confirmed = await showConfirmationModal("Are you sure you want to permanently delete this hairstyle?");
+        if (confirmed) {
             try {
                 // Delete Firestore document
                 await deleteDoc(doc(db, "hairstyles", hairstyleId));
@@ -858,7 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeHairstyleModal();
             } catch (error) {
                 console.error("Error deleting hairstyle:", error);
-                 showToast("Failed to delete hairstyle.", "error");
+                   showToast("Failed to delete hairstyle.", "error");
             }
         }
     });
@@ -1014,17 +1087,19 @@ document.addEventListener('DOMContentLoaded', () => {
     bookingModalCloseBtn.addEventListener('click', closeAdminBookingModal);
 
     // --- MODIFIED: To handle quick delete ---
-    bookingsContainer.addEventListener('click', (e) => {
-        // --- NEW: Handle quick delete ---
+    bookingsContainer.addEventListener('click', async (e) => {
+        // Handle quick delete
         if (e.target.classList.contains('delete-booking-quick')) {
             e.stopPropagation(); // Stop modal from opening
             const bookingId = e.target.dataset.id;
-            if (confirm("Are you sure you want to permanently delete this booking?")) {
+            const confirmed = await showConfirmationModal("Are you sure you want to permanently delete this booking?");
+            if (confirmed) {
                 deleteBooking(bookingId);
             }
             return;
         }
 
+        // Handle opening modal
         const card = e.target.closest('.booking-card');
         if (card) {
             openAdminBookingModal(card.dataset.bookingId);
@@ -1050,8 +1125,9 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingModalCancelBtn.style.display = 'none';
     });
     
-    bookingModalDeleteBtn.addEventListener('click', () => {
-        if (confirm("Are you sure you want to permanently delete this booking?")) {
+    bookingModalDeleteBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirmationModal("Are you sure you want to permanently delete this booking?");
+        if (confirmed) {
             deleteBooking(currentEditingBookingId);
             closeAdminBookingModal();
         }
@@ -1185,17 +1261,19 @@ document.addEventListener('DOMContentLoaded', () => {
     orderModalCloseBtn.addEventListener('click', closeAdminOrderModal);
 
     // --- MODIFIED: To handle quick delete ---
-    ordersContainer.addEventListener('click', (e) => {
-        // --- NEW: Handle quick delete ---
+    ordersContainer.addEventListener('click', async (e) => {
+        // Handle quick delete
         if (e.target.classList.contains('delete-order-quick')) {
             e.stopPropagation(); // Stop modal from opening
             const orderId = e.target.dataset.id;
-            if (confirm("Are you sure you want to permanently delete this order?")) {
+             const confirmed = await showConfirmationModal("Are you sure you want to permanently delete this order?");
+            if (confirmed) {
                 deleteOrder(orderId);
             }
             return;
         }
 
+        // Handle opening modal
         const card = e.target.closest('.order-card');
         if (card) {
             openAdminOrderModal(card.dataset.orderId);
@@ -1217,8 +1295,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    orderModalDeleteBtn.addEventListener('click', () => {
-        if (confirm("Are you sure you want to permanently delete this order?")) {
+    orderModalDeleteBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirmationModal("Are you sure you want to permanently delete this order?");
+        if (confirmed) {
             deleteOrder(currentEditingOrderId);
             closeAdminOrderModal();
         }
@@ -1545,16 +1624,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Remove picture listener
     adminRemovePictureBtn.addEventListener('click', async () => {
         if (!currentAdminId) return;
-        if (confirm("Are you sure you want to remove your profile picture?")) {
+        const confirmed = await showConfirmationModal("Are you sure you want to remove your profile picture?");
+        if (confirmed) {
             try {
                 await updateDoc(doc(db, "users", currentAdminId), { imageUrl: "" });
                 const storageRef = ref(storage, `profile_pictures/${currentAdminId}`);
                 await deleteObject(storageRef).catch(err => console.warn("Old photo not found, skipping delete.", err));
                 adminProfileImg.src = 'https://placehold.co/150x150/D67A84/FFFFFF?text=A';
-                 showToast('Profile picture removed.', 'success');
+                   showToast('Profile picture removed.', 'success');
             } catch (error) {
                 console.error("Error removing picture:", error);
-                 showToast("Failed to remove picture.", "error");
+                   showToast("Failed to remove picture.", "error");
             }
         }
     });
@@ -1568,7 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userModalCloseBtn.addEventListener('click', closeUserModal);
 
     // Event delegation for edit and delete buttons
-    usersTableBody.addEventListener('click', (e) => {
+    usersTableBody.addEventListener('click', async (e) => {
             console.log("A click was detected inside the user table body.");
             e.preventDefault();
             const target = e.target.closest('a');
@@ -1584,13 +1664,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Action link clicked for user ID: ${userId}`);
 
             if (target.classList.contains('edit-user')) {
-                console.log("Edit button confirmed. Firing openUserModal(userId)...");
                 openUserModal(userId);
             }
+            // --- MODIFIED ---
             if (target.classList.contains('delete-user')) {
-                console.log("Delete button confirmed.");
-                if (confirm(`Are you sure you want to delete this user? This action cannot be undone.`)) {
-                    console.log("User confirmed deletion. Firing deleteUser(userId)...");
+                const confirmed = await showConfirmationModal(`Are you sure you want to delete this user? This action cannot be undone.`);
+                if (confirmed) {
                     deleteUser(userId);
                 }
             }
@@ -1683,8 +1762,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     userRemovePictureBtn.addEventListener('click', async () => {
         const userId = userIdInput.value;
-        if (!userId) return; // Can't remove if no user is being edited
-        if (confirm("Are you sure you want to remove this user's profile picture?")) {
+        if (!userId) return; 
+        const confirmed = await showConfirmationModal("Are you sure you want to remove this user's profile picture?");
+        if (confirmed) {
             try {
                 await updateDoc(doc(db, "users", userId), { imageUrl: "" });
                 const storageRef = ref(storage, `profile_pictures/${userId}`);
@@ -1709,4 +1789,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(`Failed to delete user: ${error.message}`, 'error');
         }
     }
+
+    window.addEventListener('popstate', () => {
+        const hash = window.location.hash.substring(1);
+        handleNavigation(hash || 'dashboard');
+    });
 });

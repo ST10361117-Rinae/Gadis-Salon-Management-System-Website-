@@ -2962,6 +2962,38 @@ thead th.sorted i {
     gap: 0.75rem;
 }
 
+/* --- NEW: Generic Modal Button Styles --- */
+/* This will style #confirm-cancel-btn and #booking-modal-cancel-btn */
+.btn-secondary {
+    background: var(--soft);
+    color: var(--muted);
+    border: 1px solid rgba(124, 79, 85, 0.1);
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition);
+}
+.btn-secondary:hover {
+    background: var(--accent);
+}
+
+/* This will style #confirm-proceed-btn and other .btn-danger buttons */
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition);
+}
+.btn-danger:hover {
+    background: #c82333;
+}
+/* --- END NEW --- */
+
 /* Quick Delete Button Styling (X on cards) */
 .btn-card-delete {
     position: absolute;
@@ -3025,8 +3057,7 @@ thead th.sorted i {
 }
 
 /* Booking Modal Edit/Save/Cancel Buttons (ensure they inherit general button styles if needed) */
-#booking-modal-edit-btn,
-#booking-modal-cancel-btn {
+#booking-modal-edit-btn {
     /* Use btn-secondary styles if available or define */
     background: var(--soft);
     color: var(--muted);
@@ -3037,9 +3068,7 @@ thead th.sorted i {
     cursor: pointer;
     transition: background-color var(--transition);
 }
-
-#booking-modal-edit-btn:hover,
-#booking-modal-cancel-btn:hover {
+#booking-modal-edit-btn:hover {
     background: var(--accent);
 }
 
@@ -3145,9 +3174,61 @@ thead th.sorted i {
     /* Align stock number to the right */
 }
 
+/* --- NEW: Modal Form Element Styling --- */
+/* This styles all select dropdowns and inputs in modals to look consistent */
+.modal-body .form-group select,
+.modal-body .form-group input[type="date"],
+.modal-body .form-group input[type="text"],
+.modal-body .form-group input[type="time"] { /* Added time for booking modal */
+    width: 100%;
+    box-sizing: border-box; /* Ensure padding doesn't break layout */
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(124,79,85,0.08);
+    font-size: 0.95rem;
+    font-family: inherit; /* Make sure it uses the same font */
+    outline: none;
+    background-color: var(--white); /* Ensure background is white */
+    -webkit-appearance: none; /* Remove default OS styling */
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Add a custom dropdown arrow for select elements */
+.modal-body .form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237C4F55' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1em;
+    padding-right: 2.5rem; /* Make space for arrow */
+}
+
+/* Make date/time inputs clickable */
+.modal-body .form-group input[type="date"],
+.modal-body .form-group input[type="time"] {
+    position: relative;
+    z-index: 1;
+}
+/* --- END NEW --- */
+
 @media (max-width: 768px) {
     .inventory-grid {
-        grid-template-columns: 1fr;
-        /* Stack lists on smaller screens */
+        grid-template-columns: 1fr; /* Stack lists on smaller screens */
     }
+
+    /* --- NEW: Stack modal grids on mobile --- */
+    .booking-details-grid,
+    .form-group-grid { /* This handles grids in booking, order, and hairstyle modals */
+        grid-template-columns: 1fr;
+    }
+
+    /* Fix for the spacer in the order modal status section */
+    .form-group-grid .form-group label[for="order-modal-status-select"] + label {
+        display: none; /* Hide the empty spacer label on mobile */
+    }
+
+    #order-modal-save-status-btn {
+        margin-top: 0.5rem; /* Add some space when stacked */
+    }
+    /* --- END NEW --- */
 }

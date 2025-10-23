@@ -4,8 +4,8 @@
 
 // Import Firebase functions and your config
 import { auth, db, storage } from './firebase-config.js';
-import { collection, onSnapshot, doc, getDoc, updateDoc, setDoc, query, where, getDocs, deleteDoc, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { collection, onSnapshot, doc, getDoc, updateDoc, setDoc, query, where, getDocs, deleteDoc, orderBy, addDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { onAuthStateChanged,updateProfile  } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
@@ -110,8 +110,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const orderModalSaveStatusBtn = document.getElementById('order-modal-save-status-btn');
     const orderModalDeleteBtn = document.getElementById('order-modal-delete-btn');
 
-        // --- NEW: Time Off Page Elements ---
+    // --- NEW: Time Off Element Selections ---
     const timeoffTableBody = document.getElementById('timeoff-table-body');
+    const createTimeOffBtn = document.getElementById('create-timeoff-btn'); // For admin
+    const timeOffAdminModalOverlay = document.getElementById('timeoff-admin-modal-overlay');
+    const timeOffAdminModalCloseBtn = document.getElementById('timeoff-admin-modal-close-btn');
+    const timeOffAdminForm = document.getElementById('timeoff-admin-form');
+    const timeOffAdminModalTitle = document.getElementById('timeoff-admin-modal-title');
+    const timeOffAdminStylistSelect = document.getElementById('timeoff-admin-stylist');
+    const timeOffRequestIdInput = document.getElementById('timeoff-request-id');
+    const timeOffAdminErrorMsg = document.getElementById('timeoff-admin-error-msg');
+    // --- END NEW Time Off Selections ---
+
 
     // Support System Element Selections ---
     const adminTicketListContainer = document.getElementById('admin-ticket-list-container');
@@ -135,6 +145,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
     const confirmProceedBtn = document.getElementById('confirm-proceed-btn');
 
+    // --- NEW: Reason Prompt Modal Elements ---
+    const reasonPromptOverlay = document.getElementById('reason-prompt-modal-overlay');
+    const reasonPromptInput = document.getElementById('reason-prompt-input');
+    const reasonPromptError = document.getElementById('reason-prompt-error');
+    const reasonPromptTitle = document.getElementById('reason-prompt-title');
+    const reasonPromptMessage = document.getElementById('reason-prompt-message');
+    const reasonPromptCancelBtn = document.getElementById('reason-prompt-cancel-btn');
+    const reasonPromptSubmitBtn = document.getElementById('reason-prompt-submit-btn');
+    const reasonPromptCloseBtn = document.getElementById('reason-prompt-close-btn');
+    let reasonPromptResolve = null; // For reason prompt promise
+    // --- END NEW ---
+
 
     // Variables for sorting ---
     let allUsers = []; // This will hold the raw user data from Firestore
@@ -152,8 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentEditingBookingId = null; // --- NEW
     let currentEditingOrderId = null; // --- NEW
     let confirmResolve = null;
-
+    let currentOpenBookingId = null; // Store ID for edit/delete
+    let currentOpenOrderId = null; // Store ID for edit/delete
+    let confirmPromiseResolve = null; // For confirmation modal
     let currentAdminId = null;
+
     const functions = getFunctions(auth.app); // Initialize Firebase Functions
 
     // --- ADDED: Custom Toast Notification Function to replace alert() ---
@@ -184,56 +209,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- NEW: Custom Confirmation Modal Function ---
-    function showConfirmationModal(message = "Are you sure you want to proceed?") {
+   function showConfirmationModal(message, confirmClass = 'btn-danger', confirmText = 'Proceed') {
         return new Promise((resolve) => {
             confirmationMessage.textContent = message;
+            confirmProceedBtn.className = `btn ${confirmClass}`;
+            confirmProceedBtn.textContent = confirmText;
             confirmationModalOverlay.classList.add('visible');
-            confirmResolve = resolve; // Store the resolve function
+            confirmPromiseResolve = resolve;
         });
     }
 
-    // --- NEW: Event Listeners for Confirmation Modal Buttons ---
+     // --- Confirmation Modal Button Listeners ---
     confirmCancelBtn.addEventListener('click', () => {
         confirmationModalOverlay.classList.remove('visible');
-        if (confirmResolve) {
-            confirmResolve(false); // Resolve promise with false (cancelled)
-            confirmResolve = null;
-        }
+        if (confirmPromiseResolve) confirmPromiseResolve(false);
     });
-
     confirmProceedBtn.addEventListener('click', () => {
         confirmationModalOverlay.classList.remove('visible');
-        if (confirmResolve) {
-            confirmResolve(true); // Resolve promise with true (proceed)
-            confirmResolve = null;
-        }
+        if (confirmPromiseResolve) confirmPromiseResolve(true);
     });
 
-    // --- 1. Security Check and Initial Data Load ---
+    // --- NEW: Reason Prompt Modal Function ---
+    function showReasonPromptModal(config = {}) {
+        return new Promise((resolve) => {
+             if (!reasonPromptOverlay || !reasonPromptInput || !reasonPromptError || !reasonPromptTitle || !reasonPromptMessage || !reasonPromptSubmitBtn) {
+                 console.error("Reason prompt modal elements not found!");
+                 resolve(null); return;
+             }
+             reasonPromptTitle.textContent = config.title || 'Provide Reason';
+             reasonPromptMessage.textContent = config.message || 'Please provide a reason:';
+             reasonPromptInput.value = '';
+             reasonPromptError.textContent = '';
+             reasonPromptInput.placeholder = config.placeholder || 'Enter reason here...';
+             reasonPromptSubmitBtn.textContent = config.submitText || 'Submit';
+             reasonPromptSubmitBtn.className = `btn ${config.submitClass || 'btn-danger'}`;
+             reasonPromptOverlay.classList.add('visible');
+             reasonPromptInput.focus();
+             reasonPromptResolve = resolve;
+         });
+    }
+    // --- NEW: Reason Prompt Button Listeners ---
+    reasonPromptCancelBtn?.addEventListener('click', () => {
+        reasonPromptOverlay?.classList.remove('visible');
+        if (reasonPromptResolve) { reasonPromptResolve(null); reasonPromptResolve = null; }
+    });
+    reasonPromptCloseBtn?.addEventListener('click', () => {
+        reasonPromptOverlay?.classList.remove('visible');
+         if (reasonPromptResolve) { reasonPromptResolve(null); reasonPromptResolve = null; }
+    });
+    reasonPromptSubmitBtn?.addEventListener('click', () => {
+        const reason = reasonPromptInput?.value.trim();
+        if (!reason) {
+            if(reasonPromptError) reasonPromptError.textContent = 'Reason cannot be empty.';
+            return;
+        }
+        reasonPromptOverlay?.classList.remove('visible');
+        if (reasonPromptResolve) { reasonPromptResolve(reason); reasonPromptResolve = null; }
+    });
+
+     // --- 1. Security Check and Initial Data Load ---
     onAuthStateChanged(auth, async user => {
         if (user) {
-            // User is logged in, now verify they are an admin
             const userDocRef = doc(db, "users", user.uid);
             const userDoc = await getDoc(userDocRef);
-            
             if (userDoc.exists() && userDoc.data().role === 'ADMIN') {
-                // User is an authorized admin
                 currentAdminId = user.uid;
                 currentAdminData = userDoc.data();
                 console.log("Admin authenticated:", currentAdminId);
-                // --- NEW: Fetch stylists once for dropdowns ---
-                await fetchAllStylists(); 
-                // Load the main dashboard data
-                fetchDashboardMetrics();
+                await loadAllStylists(); // --- MODIFIED: Wait for stylists to load
+                
+                // --- NEW: Check hash on load ---
                 const hash = window.location.hash.substring(1);
-                handleNavigation(hash || 'dashboard'); 
+                handleNavigation(hash || 'dashboard');
             } else {
-                // User is not an admin, redirect them
                 console.warn("Unauthorized access attempt by user:", user.uid);
                 window.location.href = 'login.html';
             }
         } else {
-            // No user logged in, redirect to login
             console.log("No user logged in, redirecting...");
             window.location.href = 'login.html';
         }
@@ -256,16 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- NEW: Helper function to fetch all stylists and cache them ---
-    async function fetchAllStylists() {
-        allStylists = [];
-        const q = query(collection(db, "users"), where("role", "==", "WORKER"));
-        const snapshot = await getDocs(q);
-        snapshot.forEach(doc => {
-            allStylists.push({ id: doc.id, ...doc.data() });
-        });
-        console.log("Cached all stylists:", allStylists);
-    }
+    // --- NEW: Handle browser back/forward buttons ---
+    window.addEventListener('popstate', () => {
+        const hash = window.location.hash.substring(1);
+        handleNavigation(hash || 'dashboard');
+    });
     
     function handleNavigation(targetId) {
         const targetPage = document.getElementById(`${targetId}-page`);
@@ -317,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchAllOrders(); 
                 break;
             case 'timeoff':
-                fetchTimeOffRequests();
+                fetchAllTimeOffRequests();
                 break;
             case 'support': 
                 fetchAllSupportTickets(); 
@@ -343,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hairstyles: { title: 'Hairstyle Management', subtitle: 'Manage your salon\'s hairstyle services.' },
             bookings: { title: 'All Bookings', subtitle: 'View the complete history of all appointments.' },
             orders: { title: 'All Product Orders', subtitle: 'View the complete history of all product sales.' },
-            timeoff: { title: 'Time Off Requests', subtitle: 'Approve or reject stylist time off.' },
+             timeoff: { title: 'Time Off Management', subtitle: 'Approve, reject, or manage stylist time off.' }, 
             support: { title: 'Support Tickets', subtitle: 'Respond to and manage user support requests.' },
             profile: { title: 'My Profile', subtitle: 'Update your personal admin details.' }
         };
@@ -1303,84 +1350,197 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NEW: 13.5. All logic for Time Off Management ---
+    // --- 13. Time Off Management Logic ---
+    async function loadAllStylists() {
+        allStylists = [];
+        const stylistsQuery = query(collection(db, "users"), where("role", "==", "WORKER"));
+        try {
+            const querySnapshot = await getDocs(stylistsQuery);
+            querySnapshot.forEach(doc => allStylists.push({ id: doc.id, ...doc.data() }));
+            console.log("Cached all stylists:", allStylists);
+        } catch (error) { console.error("Error loading stylists:", error); }
+    }
 
-    function fetchTimeOffRequests() {
-        // Based on your cloud function, the collection is "timeOffRequests"
-        const q = query(collection(db, "timeOffRequests"), orderBy("startDate", "desc"));
-        
-        onSnapshot(q, async (snapshot) => {
+    function populateStylistDropdown() {
+        if (!timeOffAdminStylistSelect) return;
+        timeOffAdminStylistSelect.innerHTML = '<option value="">Select a stylist...</option>';
+        allStylists.forEach(stylist => {
+            timeOffAdminStylistSelect.innerHTML += `<option value="${stylist.id}" data-name="${stylist.name}">${stylist.name}</option>`;
+        });
+    }
+
+    function fetchAllTimeOffRequests() {
+        if (!timeoffTableBody) return;
+        timeoffTableBody.innerHTML = '<tr><td colspan="6">Loading requests...</td></tr>';
+        const q = query(collection(db, "timeOffRequests"), orderBy("timestamp", "desc"));
+
+        onSnapshot(q, (snapshot) => {
             if (snapshot.empty) {
                 timeoffTableBody.innerHTML = '<tr><td colspan="6">No time off requests found.</td></tr>';
                 return;
             }
-
-            const requestPromises = snapshot.docs.map(async (requestDoc) => {
-                const request = { id: requestDoc.id, ...requestDoc.data() };
-                
-                // Get stylist name
-                let stylistName = "Unknown Stylist";
-                try {
-                    const stylistDoc = await getDoc(doc(db, "users", request.stylistId));
-                    if (stylistDoc.exists()) {
-                        stylistName = stylistDoc.data().name;
-                    }
-                } catch (e) {
-                    console.warn("Could not fetch stylist name for time off request:", e.message);
-                }
-
+            let html = '';
+            snapshot.forEach(doc => {
+                const request = { id: doc.id, ...doc.data() };
                 const statusClass = `status-${request.status.toLowerCase()}`;
-                let actionsHtml = `<span class="role-badge ${statusClass}">${request.status}</span>`;
-
-                // If status is pending, show action buttons
-                if (request.status === 'pending') {
-                    actionsHtml = `
-                        <button class="btn-approve" data-id="${request.id}">Approve</button>
-                        <button class="btn-reject" data-id="${request.id}">Reject</button>
-                    `;
-                }
-
-                return `
-                    <tr>
-                        <td>${stylistName}</td>
+                html += `
+                    <tr data-request-id="${request.id}">
+                        <td>${request.stylistName}</td>
                         <td>${request.startDate}</td>
                         <td>${request.endDate}</td>
-                        <td>${request.reason}</td>
+                        <td class="reason-cell">${request.reason}</td>
                         <td><span class="status-badge ${statusClass}">${request.status}</span></td>
-                        <td class="action-buttons">${actionsHtml}</td>
+                        <td class="action-buttons">
+                            ${request.status === 'pending' ? `
+                                <a href="#" class="approve-timeoff" title="Approve"><i class="fas fa-check"></i></a>
+                                <a href="#" class="reject-timeoff" title="Reject"><i class="fas fa-times"></i></a>
+                            ` : ''}
+                            <a href="#" class="edit-timeoff" title="Edit"><i class="fas fa-edit"></i></a>
+                            <a href="#" class="delete-timeoff" title="Delete"><i class="fas fa-trash"></i></a>
+                        </td>
                     </tr>
                 `;
             });
-
-            timeoffTableBody.innerHTML = (await Promise.all(requestPromises)).join('');
+            timeoffTableBody.innerHTML = html;
+        }, (error) => {
+            console.error("Error fetching time off requests:", error);
+            timeoffTableBody.innerHTML = '<tr><td colspan="6">Error loading requests. Please create the required Firestore index.</td></tr>';
         });
     }
 
-    // --- NEW: Event listener for time off action buttons ---
-    timeoffTableBody.addEventListener('click', async (e) => {
-        const target = e.target;
-        const requestId = target.dataset.id;
-        if (!requestId) return;
+    // --- MODIFIED: showTimeOffModal to use classes and display ---
+    async function showTimeOffModal(requestId = null) {
+        timeOffAdminForm.reset();
+        timeOffAdminErrorMsg.textContent = '';
+        populateStylistDropdown(); 
 
-        let newStatus = null;
-        if (target.classList.contains('btn-approve')) {
-            newStatus = 'approved';
-        } else if (target.classList.contains('btn-reject')) {
-            newStatus = 'rejected';
+        if (requestId) {
+            timeOffAdminModalTitle.textContent = 'Edit Time Off Request';
+            timeOffRequestIdInput.value = requestId;
+            try {
+                const requestDoc = await getDoc(doc(db, "timeOffRequests", requestId));
+                if (requestDoc.exists()) {
+                    const data = requestDoc.data();
+                    timeOffAdminStylistSelect.value = data.stylistId;
+                    timeOffAdminForm.startDate.value = data.startDate;
+                    timeOffAdminForm.endDate.value = data.endDate;
+                    timeOffAdminForm.reason.value = data.reason;
+                }
+            } catch (error) {
+                console.error("Error fetching time off request for edit:", error);
+                timeOffAdminErrorMsg.textContent = 'Could not load request data.';
+            }
+        } else {
+            timeOffAdminModalTitle.textContent = 'Create Time Off Request';
+            timeOffRequestIdInput.value = '';
+        }
+        // --- MODIFIED: Use display: flex and classList for transition ---
+        timeOffAdminModalOverlay.style.display = 'flex';
+        setTimeout(() => timeOffAdminModalOverlay.classList.add('visible'), 10);
+    }
+
+    // --- MODIFIED: closeTimeOffModal to use classes and display ---
+    function closeTimeOffModal() {
+        timeOffAdminModalOverlay.classList.remove('visible');
+        // --- MODIFIED: Wait for transition before hiding ---
+        setTimeout(() => {
+            timeOffAdminModalOverlay.style.display = 'none';
+        }, 300); // Match transition duration
+    }
+
+    // --- MODIFIED: timeOffAdminForm submit listener ---
+    timeOffAdminForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const requestId = timeOffRequestIdInput.value;
+        const stylistId = timeOffAdminStylistSelect.value;
+        const selectedOption = timeOffAdminStylistSelect.options[timeOffAdminStylistSelect.selectedIndex];
+        const stylistName = selectedOption ? selectedOption.dataset.name : null; // Check if an option is selected
+        const startDate = timeOffAdminForm.startDate.value;
+        const endDate = timeOffAdminForm.endDate.value;
+        const reason = timeOffAdminForm.reason.value.trim();
+
+        if (!stylistId || !stylistName || !startDate || !endDate || !reason) {
+            timeOffAdminErrorMsg.textContent = 'Please fill in all fields.';
+            return;
+        }
+        if (endDate < startDate) {
+            timeOffAdminErrorMsg.textContent = 'End date cannot be before the start date.';
+            return;
         }
 
-        if (newStatus) {
-            try {
-                await updateDoc(doc(db, "timeOffRequests", requestId), {
-                    status: newStatus
-                });
-                showToast(`Request has been ${newStatus}.`, "success");
-            } catch (error) {
-                console.error("Error updating time off status:", error);
-                showToast("Failed to update status.", "error");
+        const submitButton = timeOffAdminForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        const requestData = {
+            stylistId,
+            stylistName,
+            startDate,
+            endDate,
+            reason,
+            status: 'approved',
+            timestamp: serverTimestamp()
+        };
+
+        try {
+            if (requestId) {
+                const requestRef = doc(db, "timeOffRequests", requestId);
+                delete requestData.timestamp; 
+                await updateDoc(requestRef, requestData);
+                showToast("Time off request updated.", "success");
+            } else {
+                await addDoc(collection(db, "timeOffRequests"), requestData);
+                showToast("Time off request created and approved.", "success");
             }
+            closeTimeOffModal();
+        } catch (error) {
+            console.error("Error saving time off request:", error);
+            timeOffAdminErrorMsg.textContent = 'Failed to save request.';
+        } finally {
+            submitButton.disabled = false;
         }
     });
+
+    async function deleteTimeOffRequest(requestId) {
+        const confirmed = await showConfirmationModal("Are you sure you want to delete this time off request? This cannot be undone.", 'btn-danger', 'Delete');
+        if (confirmed) {
+            try {
+                await deleteDoc(doc(db, "timeOffRequests", requestId));
+                showToast("Request deleted.", "success");
+            } catch (error) {
+                console.error("Error deleting time off request:", error);
+                showToast("Failed to delete request.", "error");
+            }
+        }
+    }
+
+    timeoffTableBody?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const link = e.target.closest('a');
+        if (!link) return;
+        const row = link.closest('tr');
+        const requestId = row?.dataset.requestId;
+        if (!requestId) return;
+        const requestRef = doc(db, "timeOffRequests", requestId);
+
+        if (link.classList.contains('approve-timeoff')) {
+            try {
+                await updateDoc(requestRef, { status: 'approved' });
+                showToast("Request approved.", "success");
+            } catch (error) { showToast("Failed to approve request.", "error"); }
+        } else if (link.classList.contains('reject-timeoff')) {
+             try {
+                await updateDoc(requestRef, { status: 'rejected' });
+                showToast("Request rejected.", "success");
+            } catch (error) { showToast("Failed to reject request.", "error"); }
+        } else if (link.classList.contains('edit-timeoff')) {
+            showTimeOffModal(requestId);
+        } else if (link.classList.contains('delete-timeoff')) {
+            deleteTimeOffRequest(requestId);
+        }
+    });
+
+     createTimeOffBtn?.addEventListener('click', () => showTimeOffModal(null));
+     timeOffAdminModalCloseBtn?.addEventListener('click', closeTimeOffModal);
 
     // 14. All logic for the Admin Support System ---
 

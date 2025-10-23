@@ -169,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ticketConversationContainer = document.getElementById('ticket-conversation-container');
     const supportChatForm = document.getElementById('support-chat-form');
     const supportChatInput = document.getElementById('support-chat-input');
+    const mobileNavCloseBtn = document.getElementById('mobile-nav-close');
+
 
     let currentUser = null;
     let userFavorites = [];
@@ -178,46 +180,49 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeCartListener = null; // To detach listener on logout
     let unsubscribeSupportChat;
     let currentOpenTicketId = null;
+    let allHairstyleDurations = []; // --- NEW: Store durations
+    let minHairstyleDuration = 1; // --- NEW: Default minimum duration
+    let salonAllSlotsCache = []; // --- NEW: Cache for all possible slots
+    let dailyBookingsCache = {}; // --- NEW: Cache for daily bookings
+    let hairstyleDurationsCache = {}; // Cache hairstyle durations { 'hairstyleId': duration }
 
 
     // --- 2.1. AUTHENTICATION & CORE UI ---
-    onAuthStateChanged(auth, async user => {
+      onAuthStateChanged(auth, async user => {
         console.log("Auth state changed. User:", user ? user.uid : "Logged Out");
         currentUser = user;
         updateUIAfterAuthStateChange();
         if (user) {
-            // ... (welcome animation logic) ...
             const justLoggedIn = sessionStorage.getItem('justLoggedIn');
-            if (justLoggedIn === 'true') { /* ... show welcome ... */ }
-
-            // --- MODIFIED: Detach old listener first ---
-            if (unsubscribeCartListener) {
-                unsubscribeCartListener();
-                console.log("Detached previous cart listener.");
+            if (justLoggedIn === 'true') {
+                 const userDoc = await getDoc(doc(db, 'users', user.uid));
+                 if (userDoc.exists()) {
+                     showWelcomeAnimation(userDoc.data().name);
+                     sessionStorage.removeItem('justLoggedIn');
+                 }
             }
-            // --- Attach new listeners ---
-            listenForCartUpdates(user.uid); // Attaches new listener and sets unsubscribeCartListener
+
+            if (unsubscribeCartListener) { unsubscribeCartListener(); }
+            listenForCartUpdates(user.uid);
             listenForFavoritesUpdates(user.uid);
             listenForMyBookings(user.uid);
             listenForMyOrders(user.uid);
             listenForNotifications(user.uid);
             listenForSupportTickets(user.uid);
-            editProfileLink.href = `#edit-profile/${user.uid}`;
+             // Ensure editProfileLink exists before setting href
+             if (editProfileLink) {
+                 editProfileLink.href = `#edit-profile/${user.uid}`;
+             }
         } else {
-             // --- MODIFIED: Detach listener on logout ---
-            if (unsubscribeCartListener) {
-                unsubscribeCartListener();
-                unsubscribeCartListener = null;
-                console.log("Detached cart listener on logout.");
-            }
-            // Clear local data and UI
+            if (unsubscribeCartListener) { unsubscribeCartListener(); unsubscribeCartListener = null; }
             currentCart = [];
             userFavorites = [];
+            dailyBookingsCache = {}; // Clear booking cache on logout
             renderCart([]); renderFavorites([]); renderMyBookings([]); renderMyOrders([]); renderNotifications([]);
-            // Optionally clear support tickets UI
-            ticketListContainer.innerHTML = '<p>Please log in to view tickets.</p>';
-            ticketConversationContainer.innerHTML = '';
-            supportChatForm.style.display = 'none';
+            // Ensure ticket containers exist before clearing
+             if (ticketListContainer) ticketListContainer.innerHTML = '<p>Please log in to view tickets.</p>';
+             if (ticketConversationContainer) ticketConversationContainer.innerHTML = '';
+             if (supportChatForm) supportChatForm.style.display = 'none';
         }
     });
 
@@ -225,7 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
     myBookingsLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(myBookingsPanel, true); });
     myOrdersLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(myOrdersPanel, true); });
     editProfileLink.addEventListener('click', (e) => { e.preventDefault(); openEditProfileModal(); });
-    notificationsButton.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(notificationsPanel, true); });
+    notificationsButton?.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleOffCanvas(notificationsPanel, true);
+            markNotificationsAsRead();
+        });
     contactSupportLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(supportPanel, true); });
 
     pageContactForm?.addEventListener('submit', async(e) => {
@@ -344,13 +353,15 @@ document.addEventListener('DOMContentLoaded', () => {
         mobileNav.innerHTML = navLinks.innerHTML;
     }
 
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    document.querySelectorAll('#mobile-nav a[href^="#"], .navbar-links a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
-            if (href && href.length > 1 && document.querySelector(href)) {
+            const targetElement = href && href.length > 1 ? document.querySelector(href) : null;
+            if (targetElement) {
                 e.preventDefault();
-                document.querySelector(href).scrollIntoView({ behavior: 'smooth' });
-                if (mobileNav.classList.contains('open')) {
+                targetElement.scrollIntoView({ behavior: 'smooth' });
+                // Close mobile nav if it's open
+                if (mobileNav?.classList.contains('open')) {
                     mobileNav.classList.remove('open');
                 }
             }
@@ -430,6 +441,33 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAndDisplayItems("hairstyles", hairstylesGrid, 6);
     fetchAndDisplayItems("products", productsGrid, 6);
 
+    // --- NEW: Fetch all hairstyle durations and salon hours once ---
+    async function fetchInitialBookingData() {
+        try {
+            // Fetch all hairstyle durations and cache them
+            const hairstylesSnapshot = await getDocs(collection(db, "hairstyles"));
+            allHairstyleDurations = []; // Reset
+            hairstyleDurationsCache = {}; // Reset
+            hairstylesSnapshot.forEach(doc => {
+                 const duration = doc.data().durationHours || 1;
+                 allHairstyleDurations.push(duration);
+                 hairstyleDurationsCache[doc.id] = Math.ceil(duration); // Store ceil value
+            });
+            if (allHairstyleDurations.length > 0) {
+                minHairstyleDuration = Math.min(...allHairstyleDurations);
+            } else { minHairstyleDuration = 1; }
+            console.log("Fetched durations:", allHairstyleDurations, "Min duration:", minHairstyleDuration);
+
+             const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
+             if (hoursDoc.exists()) {
+                 salonAllSlotsCache = hoursDoc.data().time_slots || [];
+                 console.log("Cached all salon slots:", salonAllSlotsCache);
+             } else { console.error("Salon hours document not found!"); }
+        } catch (error) { console.error("Error fetching initial booking data:", error); showToast("Could not load booking configuration.", "error"); }
+    }
+    fetchInitialBookingData();
+    // --- END INITIAL DATA FETCH ---
+
     viewAllHairstylesBtn.addEventListener('click', (e) => {
         e.preventDefault();
         fetchAndDisplayItems("hairstyles", hairstylesGrid, 0);
@@ -456,7 +494,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     cartButton.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(cartModal, true); });
-    closeCartBtn.addEventListener('click', () => toggleOffCanvas(cartModal, false));
+    closeCartBtn?.addEventListener('click', () => {
+        saveCartToFirestoreIfNeeded();
+        toggleOffCanvas(cartModal, false);
+    });
     favButton.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(favoritesModal, true); });
     closeFavoritesBtn.addEventListener('click', () => toggleOffCanvas(favoritesModal, false));
     closeBookingBtn.addEventListener('click', () => toggleOffCanvas(bookingModal, false));
@@ -466,6 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     modalBackdrop?.addEventListener('click', () => {
+        saveCartToFirestoreIfNeeded(); 
         toggleOffCanvas(cartModal, false);
         toggleOffCanvas(favoritesModal, false);
         toggleOffCanvas(bookingModal, false);
@@ -482,19 +524,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = '';
     });
     
-    document.querySelectorAll('.close-panel-btn').forEach(btn => {
+    document.querySelectorAll('.close-panel-btn, .modal-close-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const panel = btn.closest('.off-canvas, .modal-overlay');
             if (panel) {
-                 if (panel.classList.contains('off-canvas')) {
-                    toggleOffCanvas(panel, false);
-                 } else {
-                    panel.style.display = 'none';
-                    modalBackdrop.style.display = 'none';
-                    document.body.style.overflow = '';
-                 }
+                 if (panel.classList.contains('off-canvas')) { toggleOffCanvas(panel, false); }
+                 else { toggleModal(panel, false); }
             }
         });
+    });
+     // --- NEW: Mobile Nav Close Button Listener ---
+    mobileNavCloseBtn?.addEventListener('click', () => {
+        mobileNav.classList.remove('open');
     });
 
 
@@ -1149,28 +1190,36 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Hairstyle:", hairstyle.name);
         currentBookingItem = hairstyle;
         selectedBooking = { stylist: "Any Available", date: null, time: null };
+        availableStylistsForModal = []; // Clear previous stylists
         toggleModal(detailModalOverlay, false);
 
         const modalBody = document.getElementById('booking-modal-body');
         modalBody.innerHTML = '<p>Loading booking options...</p>';
         toggleOffCanvas(bookingModal, true);
-        
+
+        // Fetch available stylists
         const stylistIds = hairstyle.availableStylistIds || [];
-        availableStylistsForModal = []; // Clear previous stylists
-            for (const id of stylistIds) {
-                const stylistDoc = await getDoc(doc(db, "users", id));
-                if (stylistDoc.exists()) availableStylistsForModal.push({ id: stylistDoc.id, ...stylistDoc.data() });
-            }
-        
-        renderBookingUI(availableStylistsForModal);
+        for (const id of stylistIds) {
+            const stylistDoc = await getDoc(doc(db, "users", id));
+            if (stylistDoc.exists()) availableStylistsForModal.push({ id: stylistDoc.id, ...stylistDoc.data() });
+        }
+        console.log("Available stylists for this service:", availableStylistsForModal.map(s=>s.name));
+
+        renderBookingUI(availableStylistsForModal); // Pass stylists to UI render
         const today = new Date();
         today.setHours(0,0,0,0);
         const todayString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
         selectedBooking.date = todayString;
         console.log("Default date selected:", selectedBooking.date);
-        
-        document.querySelector(`.date-day[data-date="${selectedBooking.date}"]`)?.classList.add('selected');
-        handleBookingSelectionChange();
+
+        // --- Use try-catch for initial selection ---
+        try {
+            document.querySelector(`.date-day[data-date="${selectedBooking.date}"]`)?.classList.add('selected');
+            await handleBookingSelectionChange(); // Make it async
+        } catch (error) {
+             console.error("Error during initial booking selection change:", error);
+             document.getElementById('time-slot-grid').innerHTML = '<p>Could not load available times initially.</p>';
+        }
     }
 
     function renderBookingUI(stylists) {
@@ -1243,112 +1292,189 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleBookingSelectionChange() {
         const selectedStylistEl = document.querySelector('input[name="stylist"]:checked');
         selectedBooking.stylist = selectedStylistEl ? selectedStylistEl.value : null;
-        selectedBooking.time = null; // Reset time on any change
+        selectedBooking.time = null; // Reset time
+        console.log(`Selection changed. Stylist: ${selectedBooking.stylist}, Date: ${selectedBooking.date}`);
 
         const timeSlotGrid = document.getElementById('time-slot-grid');
         if (!selectedBooking.stylist || !selectedBooking.date) {
-            timeSlotGrid.innerHTML = 'Please select a stylist and date.';
-            return;
+            timeSlotGrid.innerHTML = '<p>Please select a stylist and date.</p>';
+            updateConfirmButtonState(); return;
         }
 
         timeSlotGrid.innerHTML = '<p>Loading times...</p>';
         updateConfirmButtonState();
-        
+
         const dateToSend = selectedBooking.date;
-        console.log(`Fetching slots for date string: "${dateToSend}"`);
-
         const getAvailableSlots = httpsCallable(functions, 'getAvailableSlots');
+        let finalAvailableSlots = new Set();
+        let allOccupiedSlotsForDate = new Set(); // Stores occupied slots for the *entire day*
 
-        // --- NEW: Handle "Any Available" separately ---
-        if (selectedBooking.stylist === "Any Available") {
-            try {
-                // Get all specific stylist names available for this service
-                const specificStylistNames = availableStylistsForModal.map(s => s.name);
-                if (specificStylistNames.length === 0) {
-                    timeSlotGrid.innerHTML = '<p>No stylists available for this service.</p>';
-                    return;
-                }
+        try {
+            // Fetch all bookings for the date once (use cache)
+            const dailyBookings = await getBookingsForDate(dateToSend);
+            allOccupiedSlotsForDate = calculateAllOccupiedSlots(dailyBookings); // Calculate occupied based on ALL bookings
+            console.log(`Occupied slots for ${dateToSend}:`, Array.from(allOccupiedSlotsForDate));
 
-                // Call getAvailableSlots for each specific stylist
-                const slotPromises = specificStylistNames.map(stylistName =>
-                    getAvailableSlots({ stylistName: stylistName, date: dateToSend, hairstyleId: currentBookingItem.id })
+            // Call Cloud Function to get slots suitable for the *selected duration*
+            if (selectedBooking.stylist === "Any Available") {
+                console.log("Fetching slots for 'Any Available'.");
+                if (availableStylistsForModal.length === 0) throw new Error("No stylists available.");
+
+                const promises = availableStylistsForModal.map(stylist =>
+                    getAvailableSlots({ stylistName: stylist.name, date: dateToSend, hairstyleId: currentBookingItem.id })
+                    .catch(err => { console.warn(`Error for ${stylist.name}:`, err.message); return { data: { slots: [] } }; })
                 );
-
-                // Use Promise.allSettled to handle potential errors for individual stylists
-                const results = await Promise.allSettled(slotPromises);
-
-                const combinedSlots = new Set();
-                results.forEach((result, index) => {
+                const results = await Promise.allSettled(promises);
+                results.forEach(result => {
                     if (result.status === 'fulfilled' && result.value.data.slots) {
-                        result.value.data.slots.forEach(slot => combinedSlots.add(slot));
-                    } else {
-                        console.warn(`Could not fetch slots for stylist ${specificStylistNames[index]}:`, result.reason || 'Unknown error');
+                        result.value.data.slots.forEach(slot => finalAvailableSlots.add(slot));
                     }
                 });
-
-                if (combinedSlots.size === 0) {
-                    timeSlotGrid.innerHTML = '<p>No available times found for any stylist on this date.</p>';
-                } else {
-                     // Get all possible slots to determine occupied ones correctly for combined view
-                    const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
-                    const allSlots = hoursDoc.exists() ? hoursDoc.data().time_slots || [] : [];
-                    const occupiedSlots = new Set(allSlots.filter(slot => !combinedSlots.has(slot)));
-
-                    // Apply lead time check for today
-                     const today = new Date();
-                     const todayString = today.toISOString().split('T')[0];
-                     if (selectedBooking.date === todayString) {
-                         const leadTimeHour = today.getHours() + 3; // 3-hour lead time
-                         allSlots.forEach(slot => {
-                             if (parseInt(slot.split(':')[0]) < leadTimeHour) occupiedSlots.add(slot);
-                         });
-                     }
-
-                    renderTimeSlots(allSlots, occupiedSlots);
-                }
-            } catch (error) {
-                console.error("Error fetching combined slots:", error);
-                timeSlotGrid.innerHTML = '<p>Could not load available times.</p>';
-            }
-        } else {
-            // --- Original logic for a specific stylist ---
-            try {
+            } else {
+                console.log(`Fetching slots for specific stylist: ${selectedBooking.stylist}`);
                 const result = await getAvailableSlots({ stylistName: selectedBooking.stylist, date: dateToSend, hairstyleId: currentBookingItem.id });
-                const availableSlots = new Set(result.data.slots || []);
-
-                const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
-                const allSlots = hoursDoc.exists() ? hoursDoc.data().time_slots || [] : [];
-                const occupiedSlots = new Set(allSlots.filter(slot => !availableSlots.has(slot)));
-
-                 // Apply lead time check for today
-                 const today = new Date();
-                 const todayString = today.toISOString().split('T')[0];
-                 if (selectedBooking.date === todayString) {
-                     const leadTimeHour = today.getHours() + 3; // 3-hour lead time
-                     allSlots.forEach(slot => {
-                         if (parseInt(slot.split(':')[0]) < leadTimeHour) occupiedSlots.add(slot);
-                     });
-                 }
-
-                console.log("Occupied slots found for specific stylist:", Array.from(occupiedSlots));
-                renderTimeSlots(allSlots, occupiedSlots);
-            } catch (error) {
-                console.error("Error fetching time slots:", error);
-                timeSlotGrid.innerHTML = '<p>Could not load available times for this stylist.</p>';
+                if (result.data.slots) {
+                    result.data.slots.forEach(slot => finalAvailableSlots.add(slot));
+                }
             }
+
+            console.log("Combined final slots from function:", Array.from(finalAvailableSlots));
+
+            if (salonAllSlotsCache.length === 0) { /* ... fallback fetch ... */ }
+
+            // Render, passing ALL occupied slots for min duration check, and function results for selected duration check
+            renderTimeSlots(salonAllSlotsCache, allOccupiedSlotsForDate, Array.from(finalAvailableSlots));
+
+        } catch (error) {
+            console.error("Error in handleBookingSelectionChange:", error);
+            timeSlotGrid.innerHTML = `<p>Could not load available times. ${error.message || ''}</p>`;
+        } finally {
+            updateConfirmButtonState();
         }
-        //updateConfirmButtonState();
     }
 
-    function renderTimeSlots(allSlots, occupiedSlots) {
-        const timeSlotGrid = document.getElementById('time-slot-grid');
-        if (!allSlots || allSlots.length === 0) {
-            timeSlotGrid.innerHTML = '<p>No available times for this day.</p>'; return;
+    // --- NEW: Function to get all bookings for a specific date ---
+    async function getBookingsForDate(dateString) {
+        if (dailyBookingsCache[dateString]) {
+            console.log(`Using cached bookings for ${dateString}`);
+            return dailyBookingsCache[dateString];
         }
-        timeSlotGrid.innerHTML = allSlots.map(slot => {
-            const isOccupied = occupiedSlots.has(slot);
-            return `<button class="time-slot-btn" ${isOccupied ? 'disabled' : ''}>${slot}</button>`;
+        console.log(`Fetching bookings for ${dateString}`);
+        const bookingsRef = collection(db, "bookings");
+        const q = query(bookingsRef, where("date", "==", dateString), where("status", "in", ["Confirmed", "Pending"]));
+        const snapshot = await getDocs(q);
+        const bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Get durations (use cache if available, otherwise fetch)
+        const bookingsWithDuration = await Promise.all(bookings.map(async (booking) => {
+            let duration = 1; // Default
+            if (hairstyleDurationsCache[booking.hairstyleId]) {
+                 duration = hairstyleDurationsCache[booking.hairstyleId];
+            } else {
+                 try {
+                     const styleDoc = await getDoc(doc(db, "hairstyles", booking.hairstyleId));
+                     if (styleDoc.exists()) {
+                         duration = Math.ceil(styleDoc.data().durationHours) || 1;
+                         hairstyleDurationsCache[booking.hairstyleId] = duration; // Cache it
+                     }
+                 } catch (err) {
+                     console.warn(`Could not fetch duration for hairstyle ${booking.hairstyleId}`, err);
+                 }
+            }
+            return { ...booking, durationSlots: duration };
+        }));
+
+        dailyBookingsCache[dateString] = bookingsWithDuration; // Cache result
+        return bookingsWithDuration;
+    }
+
+    // --- NEW: Function to calculate all occupied slots for a given list of bookings ---
+    function calculateAllOccupiedSlots(bookings) {
+        const occupied = new Set();
+        if (salonAllSlotsCache.length === 0) return occupied; // Need all slots list
+
+        bookings.forEach(booking => {
+            const startIndex = salonAllSlotsCache.indexOf(booking.time);
+            if (startIndex !== -1) {
+                for (let i = 0; i < booking.durationSlots; i++) {
+                    if (startIndex + i < salonAllSlotsCache.length) {
+                        occupied.add(salonAllSlotsCache[startIndex + i]);
+                    }
+                }
+            }
+        });
+        return occupied;
+    }
+
+     // --- NEW HELPER: checkMinDurationAvailability ---
+    // Checks if a given start slot allows for the minimum hairstyle duration
+    function checkMinDurationAvailability(startSlot, minDuration, allSlotsList, occupiedSlotsSet) {
+        const startIndex = allSlotsList.indexOf(startSlot);
+        if (startIndex === -1 || startIndex + minDuration > allSlotsList.length) {
+            return false; // Slot not found or not enough total slots left
+        }
+        for (let i = 0; i < minDuration; i++) {
+            const currentSlotIndex = startIndex + i;
+            // Check if slot exists and is not occupied
+            if (currentSlotIndex >= allSlotsList.length || occupiedSlotsSet.has(allSlotsList[currentSlotIndex])) {
+                // Check for non-consecutive slots (shouldn't happen with salonAllSlotsCache, but good practice)
+                if (i > 0 && allSlotsList.indexOf(allSlotsList[currentSlotIndex]) !== startIndex + i) return false;
+                return false; // Slot occupied or beyond list bounds
+            }
+        }
+        return true; // Found enough consecutive free slots
+    }
+
+     function renderTimeSlots(allSlotsList, occupiedSlotsSet, finalSlotsFromFunc) {
+        const timeSlotGrid = document.getElementById('time-slot-grid');
+        if (!allSlotsList || allSlotsList.length === 0) {
+            timeSlotGrid.innerHTML = '<p>Salon hours not configured.</p>'; return;
+        }
+
+        const availableSlotsForDisplay = new Set(finalSlotsFromFunc);
+        const now = new Date();
+        const todayString = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+        const isToday = selectedBooking.date === todayString;
+        const currentMinutesPastMidnight = now.getHours() * 60 + now.getMinutes();
+        const bufferMinutes = 60;
+        const earliestAllowedMinutes = currentMinutesPastMidnight + bufferMinutes;
+
+        console.log(`Rendering slots for ${selectedBooking.date}. Is today: ${isToday}. Current minutes: ${currentMinutesPastMidnight}, Earliest allowed: ${earliestAllowedMinutes}`);
+
+        let hasEnabledSlots = false; // --- Flag to track if any slot is enabled ---
+        const slotsHtml = allSlotsList.map(slot => {
+            const [slotHour, slotMinute] = slot.split(':').map(Number);
+            const slotMinutesPastMidnight = slotHour * 60 + slotMinute;
+
+            const isPast = isToday && slotMinutesPastMidnight < earliestAllowedMinutes;
+            const isOccupiedByAnyBooking = occupiedSlotsSet.has(slot);
+            const isAvailableForSelectedDuration = availableSlotsForDisplay.has(slot);
+            const meetsMinDuration = checkMinDurationAvailability(slot, minHairstyleDuration, allSlotsList, occupiedSlotsSet);
+
+            const isDisabled = isPast || isOccupiedByAnyBooking || !isAvailableForSelectedDuration || !meetsMinDuration;
+            const isSelected = slot === selectedBooking.time;
+
+            if (!isDisabled) { // --- If the slot is NOT disabled, set the flag ---
+                hasEnabledSlots = true;
+            }
+
+            // Logging for disabled slots (optional)
+            if(isDisabled && !isOccupiedByAnyBooking && !isPast) {
+                 // console.log(`Slot ${slot} disabled: AvailableForSelected=${isAvailableForSelectedDuration}, MeetsMinDuration=${meetsMinDuration}`);
+            }
+             if(isPast) {
+                  console.log(`Slot ${slot} (${slotMinutesPastMidnight} mins) disabled: Is in the past (Earliest allowed: ${earliestAllowedMinutes} mins)`);
+             }
+
+            return `<button class="time-slot-btn ${isSelected ? 'selected' : ''}" ${isDisabled ? 'disabled' : ''}>${slot}</button>`;
         }).join('');
+
+        // --- Use the flag to decide what to display ---
+        if (!hasEnabledSlots) {
+             timeSlotGrid.innerHTML = '<p>No available times found for this selection.</p>';
+        } else {
+             timeSlotGrid.innerHTML = slotsHtml;
+        }
     }
     
     
@@ -1404,18 +1530,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('my-bookings-container');
         if(!container) return;
         if (bookings.length === 0) { container.innerHTML = '<p>You have no bookings yet.</p>'; return; }
-        
+
         const bookingCardsHtml = await Promise.all(bookings.map(async b => {
             const hairstyleDoc = await getDoc(doc(db, "hairstyles", b.hairstyleId));
             const imageUrl = hairstyleDoc.exists() ? hairstyleDoc.data().imageUrl : 'https://placehold.co/400x400/F4DCD6/7C4F55?text=Style';
-            
+
+            // --- NEW: Check for both declineReason and cancellationReason ---
+            let reasonHtml = '';
+            if ((b.status === 'Declined' || b.status === 'Cancelled') && (b.declineReason || b.cancellationReason)) {
+                const reason = b.declineReason || b.cancellationReason; // Use whichever exists
+                reasonHtml = `<p class="decline-reason"><strong>Reason:</strong> ${reason}</p>`;
+            }
+            // --- END NEW ---
+
             return `
                 <div class="list-item-card with-image" data-booking-id="${b.id}">
                     <img src="${imageUrl}" alt="${b.serviceName}" class="item-card-image">
                     <div class="item-card-content">
                         <h4>${b.serviceName}</h4>
-                        <p>With ${b.stylistName} on ${b.date} at ${b.time}</p>
+                        <p>With ${b.stylistName || 'Any Available'} on ${b.date} at ${b.time}</p>
                         <p>Status: <span class="status-badge status-${b.status.toLowerCase()}">${b.status}</span></p>
+                        ${reasonHtml} 
                     </div>
                 </div>
             `;
@@ -1512,29 +1647,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const clearAllBtn = e.target.closest('#clear-all-notifications-btn');
         const orderCard = e.target.closest('.order-card[data-order-id]');
 
-       if (removeBtn) {
+        if (removeBtn) {
             e.stopPropagation();
             const notificationId = removeBtn.dataset.notificationId;
             const confirmed = await showConfirmationModal('Are you sure you want to delete this notification?', 'btn-danger', 'Delete');
             if (confirmed && currentUser) {
-                await deleteDoc(doc(db, 'users', currentUser.uid, 'notifications', notificationId));
-                 showToast("Notification deleted.", "success");
+                 try {
+                    await deleteDoc(doc(db, 'users', currentUser.uid, 'notifications', notificationId));
+                    showToast("Notification deleted.", "success");
+                 } catch (error) {
+                    console.error("Error deleting notification:", error);
+                    showToast("Could not delete notification.", "error");
+                 }
             }
         }
         else if (clearAllBtn) {
-             const confirmed = await showConfirmationModal('Are you sure you want to clear all notifications?', 'btn-danger', 'Clear All');
-             if (confirmed && currentUser) {
-                const q = query(collection(db, 'users', currentUser.uid, 'notifications'));
-                const snapshot = await getDocs(q);
-                if (!snapshot.empty) {
-                    const batch = writeBatch(db);
-                    snapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
-                    await batch.commit();
-                    showToast("All notifications cleared.", "success");
-                }
+            const confirmed = await showConfirmationModal('Are you sure you want to clear all notifications?', 'btn-danger', 'Clear All');
+            if (confirmed && currentUser) {
+                try {
+                    const q = query(collection(db, 'users', currentUser.uid, 'notifications'));
+                    const snapshot = await getDocs(q);
+                    if (!snapshot.empty) {
+                        const batch = writeBatch(db);
+                        snapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
+                        await batch.commit();
+                        showToast("All notifications cleared.", "success");
+                    }
+                 } catch (error) {
+                    console.error("Error clearing notifications:", error);
+                    showToast("Could not clear notifications.", "error");
+                 }
             }
         }
-       else if (orderCard) {
+        else if (orderCard) {
             const orderId = orderCard.dataset.orderId;
             if (orderId) {
                 openOrderDetailsModal(orderId);
@@ -1545,8 +1690,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (bookingId) {
                 openBookingDetailWithChat(bookingId);
                 if (bookingCard.classList.contains('notification-item')) {
-                     const notificationId = bookingCard.dataset.notificationId;
-                     await updateDoc(doc(db, 'users', currentUser.uid, 'notifications', notificationId), { isRead: true });
+                    const notificationId = bookingCard.dataset.notificationId;
+                    if(currentUser && notificationId){
+                       try {
+                           await updateDoc(doc(db, 'users', currentUser.uid, 'notifications', notificationId), { isRead: true });
+                       } catch (error) {
+                           console.warn("Could not mark notification as read:", error);
+                       }
+                    }
                 }
             }
         }
@@ -1812,15 +1963,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<form id="chat-form"><input type="text" placeholder="Type a message..." required><button type="submit" class="btn">Send</button></form>` 
                 : '<p class="chat-disabled-notice">Chat is only available for confirmed bookings.</p>';
             
+            // --- NEW: Add Reason if Cancelled or Declined ---
+            let reasonHtml = '';
+             if ((booking.status === 'Declined' || booking.status === 'Cancelled') && (booking.declineReason || booking.cancellationReason)) {
+                 const reason = booking.declineReason || booking.cancellationReason;
+                 reasonHtml = `<p class="decline-reason"><strong>Reason:</strong> ${reason}</p>`;
+             }
+            // --- END NEW ---
+
             modalBody.innerHTML = `
                 <div class="booking-details-summary">
-                    <p><strong>Stylist:</strong> ${booking.stylistName}</p>
+                    <p><strong>Stylist:</strong> ${booking.stylistName || 'Any Available'}</p>
                     <p><strong>Date:</strong> ${booking.date} at ${booking.time}</p>
                     <p><strong>Status:</strong> <span class="status-badge status-${booking.status.toLowerCase()}">${booking.status}</span></p>
+                    ${reasonHtml}
                 </div>
                 ${chatHtml}
                 ${inputHtml}
             `;
+
 
             const chatContainer = modalBody.querySelector('.chat-messages-container');
             if(chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -1889,7 +2050,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const order = orderSnap.data();
-        document.getElementById('order-modal-title').textContent = `Order #${orderId.substring(0, 8)}`;
+        document.getElementById('order-modal-title').textContent = `Order #${orderId.slice(-6)}`;
         
         let itemsHtml = order.items.map(item => `
             <div class="order-item">

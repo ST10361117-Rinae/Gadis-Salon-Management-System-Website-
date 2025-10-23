@@ -22,6 +22,7 @@
                 <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i><span>Inventory</span></a>
                 <a href="#orders" class="nav-link"><i class="fas fa-receipt"></i><span>Product Orders</span></a>
                 <a href="#profile" class="nav-link"><i class="fas fa-user-edit"></i><span>My Profile</span></a>
+                <a href="#timeoff" class="nav-link"><i class="fas fa-user-clock"></i><span>Time Off</span></a> 
                 <a href="#support" class="nav-link"><i class="fas fa-headset"></i><span>Support</span></a>
                 <a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
             </nav>
@@ -69,6 +70,30 @@
                         <!-- Order cards will be loaded here -->
                     </div>
                 </section>
+
+                <!-- NEW: Time Off Page -->
+                 <section id="timeoff-page" class="dashboard-page fade-in-up" style="display: none;">
+                    <div class="page-actions">
+                         <button id="request-timeoff-btn" class="btn"><i class="fas fa-plus"></i> Request Time Off</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timeoff-requests-container">
+                                <!-- Time off requests will be loaded here -->
+                                <tr><td colspan="4">Loading requests...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <!-- END NEW Time Off Page -->
 
 
                 <!-- Profile Page -->
@@ -234,6 +259,75 @@
             </form>
         </div>
     </div>
+
+     <!-- NEW: Time Off Request Modal -->
+     <div id="timeoff-request-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Request Time Off</h2>
+                <button id="timeoff-modal-close-btn" class="close-btn">&times;</button>
+            </div>
+            <form id="timeoff-request-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="timeoff-start-date">Start Date</label>
+                        <input type="date" id="timeoff-start-date" name="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="timeoff-end-date">End Date</label>
+                        <input type="date" id="timeoff-end-date" name="endDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="timeoff-reason">Reason</label>
+                        <textarea id="timeoff-reason" name="reason" rows="3" required placeholder="e.g., Vacation, Sick day, Personal"></textarea>
+                    </div>
+                    <p id="timeoff-error-msg" style="color: red; text-align: center; margin-top: 1rem;"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- END NEW Time Off Request Modal -->
+
+    <!-- NEW: Reason Prompt Modal -->
+    <div id="reason-prompt-modal-overlay" class="modal-overlay">
+        <div id="reason-prompt-modal" class="modal">
+            <div class="modal-header">
+                 <h3 id="reason-prompt-title">Provide Reason</h3> <!-- Title -->
+                 <button id="reason-prompt-close-btn" class="close-btn">&times;</button>
+             </div>
+             <div class="modal-body">
+                 <p id="reason-prompt-message">Please provide a reason:</p>
+                 <div class="form-group">
+                     <textarea id="reason-prompt-input" rows="3" required></textarea>
+                     <p id="reason-prompt-error" style="color: red; margin-top: 0.5rem;"></p>
+                 </div>
+             </div>
+             <div class="modal-footer" id="reason-prompt-actions">
+                 <button id="reason-prompt-cancel-btn" class="btn btn-secondary">Cancel</button>
+                 <button id="reason-prompt-submit-btn" class="btn btn-danger">Submit</button> <!-- Default style -->
+             </div>
+        </div>
+    </div>
+    <!-- END NEW Reason Prompt Modal -->
+
+    <!-- NEW: Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- NEW: Generic Confirmation Modal -->
+    <div id="confirmation-modal-overlay" class="modal-overlay">
+        <div id="confirmation-modal" class="modal">
+            <h3>Confirmation</h3>
+            <p id="confirmation-message">Are you sure?</p>
+            <div id="confirmation-modal-actions">
+                <button id="confirm-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-proceed-btn" class="btn btn-danger">Proceed</button> <!-- Default class -->
+            </div>
+        </div>
+    </div>
+    <!-- END NEW -->
     
     <script type="module" src="js/main.js"></script>
     <script type="module" src="js/stylist-dashboard.js"></script>

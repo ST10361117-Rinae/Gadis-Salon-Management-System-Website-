@@ -2974,6 +2974,7 @@ thead th.sorted i {
     cursor: pointer;
     transition: background-color var(--transition);
 }
+
 .btn-secondary:hover {
     background: var(--accent);
 }
@@ -2989,9 +2990,11 @@ thead th.sorted i {
     cursor: pointer;
     transition: background-color var(--transition);
 }
+
 .btn-danger:hover {
     background: #c82333;
 }
+
 /* --- END NEW --- */
 
 /* Quick Delete Button Styling (X on cards) */
@@ -3068,6 +3071,7 @@ thead th.sorted i {
     cursor: pointer;
     transition: background-color var(--transition);
 }
+
 #booking-modal-edit-btn:hover {
     background: var(--accent);
 }
@@ -3179,17 +3183,22 @@ thead th.sorted i {
 .modal-body .form-group select,
 .modal-body .form-group input[type="date"],
 .modal-body .form-group input[type="text"],
-.modal-body .form-group input[type="time"] { /* Added time for booking modal */
+.modal-body .form-group input[type="time"] {
+    /* Added time for booking modal */
     width: 100%;
-    box-sizing: border-box; /* Ensure padding doesn't break layout */
+    box-sizing: border-box;
+    /* Ensure padding doesn't break layout */
     padding: 0.7rem 0.9rem;
     border-radius: 8px;
-    border: 1px solid rgba(124,79,85,0.08);
+    border: 1px solid rgba(124, 79, 85, 0.08);
     font-size: 0.95rem;
-    font-family: inherit; /* Make sure it uses the same font */
+    font-family: inherit;
+    /* Make sure it uses the same font */
     outline: none;
-    background-color: var(--white); /* Ensure background is white */
-    -webkit-appearance: none; /* Remove default OS styling */
+    background-color: var(--white);
+    /* Ensure background is white */
+    -webkit-appearance: none;
+    /* Remove default OS styling */
     -moz-appearance: none;
     appearance: none;
 }
@@ -3200,7 +3209,8 @@ thead th.sorted i {
     background-repeat: no-repeat;
     background-position: right 0.7rem center;
     background-size: 1em;
-    padding-right: 2.5rem; /* Make space for arrow */
+    padding-right: 2.5rem;
+    /* Make space for arrow */
 }
 
 /* Make date/time inputs clickable */
@@ -3209,26 +3219,703 @@ thead th.sorted i {
     position: relative;
     z-index: 1;
 }
+
 /* --- END NEW --- */
 
 @media (max-width: 768px) {
     .inventory-grid {
-        grid-template-columns: 1fr; /* Stack lists on smaller screens */
+        grid-template-columns: 1fr;
+        /* Stack lists on smaller screens */
     }
 
     /* --- NEW: Stack modal grids on mobile --- */
     .booking-details-grid,
-    .form-group-grid { /* This handles grids in booking, order, and hairstyle modals */
+    .form-group-grid {
+        /* This handles grids in booking, order, and hairstyle modals */
         grid-template-columns: 1fr;
     }
 
     /* Fix for the spacer in the order modal status section */
-    .form-group-grid .form-group label[for="order-modal-status-select"] + label {
-        display: none; /* Hide the empty spacer label on mobile */
+    .form-group-grid .form-group label[for="order-modal-status-select"]+label {
+        display: none;
+        /* Hide the empty spacer label on mobile */
     }
 
     #order-modal-save-status-btn {
-        margin-top: 0.5rem; /* Add some space when stacked */
+        margin-top: 0.5rem;
+        /* Add some space when stacked */
     }
+
     /* --- END NEW --- */
 }
+
+/* --- Styles for Toast Notifications --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    /* Position at the bottom */
+    left: 50%;
+    /* Center horizontally */
+    transform: translateX(-50%);
+    /* Adjust centering */
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    align-items: center;
+    /* Center toasts horizontally */
+}
+
+.toast {
+    background-color: var(--dark, #333);
+    /* Use CSS variable with fallback */
+    color: var(--white, #fff);
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-sm, 8px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* Start off-screen below */
+    transform: translateY(calc(100% + 20px));
+    transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+    opacity: 0;
+    pointer-events: auto;
+    width: fit-content;
+    /* Adjust width to content */
+    max-width: 90%;
+    /* Prevent excessive width on small screens */
+}
+
+.toast.show {
+    transform: translateY(0);
+    /* Slide in from bottom */
+    opacity: 1;
+}
+
+.toast.toast-success {
+    background: linear-gradient(90deg, #155724, #28a745);
+}
+
+.toast.toast-error {
+    background: linear-gradient(90deg, #721c24, #dc3545);
+}
+
+.toast.toast-warning {
+    background: linear-gradient(90deg, #856404, #ffc107);
+    color: #333;
+}
+
+/* --- Styles for Generic Confirmation Modal --- */
+#confirmation-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s 0.3s;
+    backdrop-filter: blur(5px);
+}
+
+#confirmation-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s 0s;
+}
+
+#confirmation-modal {
+    background: var(--card-bg, #fff);
+    padding: 2rem;
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    border-top: 4px solid var(--primary, #D67A84);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+#confirmation-modal-overlay.visible #confirmation-modal {
+    transform: scale(1);
+}
+
+#confirmation-modal h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--muted, #7C4F55);
+}
+
+#confirmation-message {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary, #212121);
+    line-height: 1.6;
+}
+
+#confirmation-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* General button styles for confirmation */
+#confirmation-modal-actions button.btn {
+    /* Ensure .btn class is targeted */
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-sm, 8px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 0.95rem;
+    /* --- ADDED font size --- */
+    font-family: inherit;
+    /* --- ADDED font family --- */
+}
+
+/* Specific styles using classes from JS */
+.btn-secondary {
+    background: var(--soft, #f9f6f6);
+    color: var(--muted, #7C4F55);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.btn-secondary:hover {
+    background: var(--accent, #F4DCD6);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+}
+
+.btn-primary {
+    /* Add style if you use btn-primary */
+    background: var(--primary, #D67A84);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--muted, #7C4F55);
+    box-shadow: 0 4px 10px rgba(214, 122, 132, 0.3);
+}
+
+/* Dark mode adjustments if needed */
+.dark-mode .btn-secondary {
+    background: var(--card-bg, #1E1E1E);
+    color: var(--text-secondary, #A0A0A0);
+    border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+.dark-mode .btn-secondary:hover {
+    background: var(--soft, #2a2a2a);
+}
+
+/* --- NEW: Styles for Reason Prompt Modal --- */
+#reason-prompt-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1051;
+    /* Slightly higher than confirmation */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s 0.3s;
+    backdrop-filter: blur(5px);
+}
+
+#reason-prompt-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s 0s;
+}
+
+#reason-prompt-modal {
+    background: var(--card-bg, #fff);
+    padding: 0;
+    /* Remove padding for header/footer */
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    max-width: 90%;
+    width: 450px;
+    /* Slightly wider for textarea */
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+#reason-prompt-modal-overlay.visible #reason-prompt-modal {
+    transform: scale(1);
+}
+
+#reason-prompt-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+#reason-prompt-modal .modal-header h3 {
+    margin: 0;
+    color: var(--muted, #7C4F55);
+    font-size: 1.2rem;
+}
+
+#reason-prompt-modal .modal-body {
+    padding: 1.5rem;
+}
+
+#reason-prompt-modal .modal-body p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-primary, #212121);
+}
+
+#reason-prompt-modal .form-group textarea {
+    min-height: 80px;
+    /* Specific height for reason */
+    width: 100%;
+    padding: 0.8rem;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    background: var(--soft, #f9f6f6);
+    color: var(--text-primary, #212121);
+    font-size: 1rem;
+    resize: vertical;
+}
+
+#reason-prompt-error {
+    color: #dc3545;
+    font-size: 0.9em;
+    min-height: 1.1em;
+    /* Reserve space */
+    margin-top: 0.5rem;
+    /* Space between textarea and error */
+}
+
+#reason-prompt-modal .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    /* Align buttons right */
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+#reason-prompt-modal .modal-footer button.btn {
+    padding: 0.7rem 1.5rem;
+    font-weight: 600;
+    /* --- ADDED font weight --- */
+    font-size: 0.95rem;
+    /* --- ADDED font size --- */
+    font-family: inherit;
+    /* --- ADDED font family --- */
+}
+
+.action-btn {
+    font-size: 0.9rem;
+    /* Standardize font size */
+    font-family: inherit;
+    /* Ensure font family */
+}
+
+/* Time Off Table Status Badges */
+.status-badge.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.form-group {
+    /* Ensure this exists */
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    /* Ensure this exists */
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.form-group input[type="date"],
+.form-group textarea {
+    /* Ensure this exists */
+    width: 100%;
+    padding: 0.8rem;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    background: var(--soft, #f9f6f6);
+    color: var(--text-primary, #212121);
+    font-size: 1rem;
+    /* Match other inputs */
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.dark-mode .form-group input[type="date"],
+.dark-mode .form-group textarea {
+    background: var(--card-bg, #1E1E1E);
+    border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+    color: var(--text-primary, #EAEAEA);
+}
+
+/* Ensure general button styles are present or included from style.css */
+.btn {
+    padding: 0.8rem 1.5rem;
+    border-radius: var(--radius-sm, 8px);
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: linear-gradient(90deg, var(--primary, #D67A84), var(--muted, #7C4F55));
+    color: var(--white, #fff);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(165, 99, 108, 0.2);
+    /* Adjusted shadow */
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Adjustments for profile error message if needed */
+#profile-error-msg {
+    color: #dc3545;
+    /* Standard error color */
+    text-align: center;
+    margin-top: 1rem;
+    min-height: 1.2em;
+    /* Reserve space */
+}
+
+/* Chat Send Button Style */
+#chat-form button,
+#support-chat-form button {
+    background: var(--muted);
+    color: white;
+    border: none;
+    padding: 0 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#chat-form button:hover,
+#support-chat-form button:hover {
+    background: var(--primary);
+}
+
+/* --- NEW: Admin Time Off Modal Styles --- */
+/* Make sure modal overlay is visible when class is added */
+#timeoff-admin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s 0.3s;
+    backdrop-filter: blur(5px);
+}
+
+#timeoff-admin-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s 0s;
+}
+
+/* Use existing modal class for styling */
+#timeoff-admin-modal-overlay .modal {
+    background: var(--card-bg, #fff);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    max-width: 90%;
+    width: 500px;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+#timeoff-admin-modal-overlay.visible .modal {
+    transform: scale(1);
+}
+
+#timeoff-admin-form .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+#timeoff-admin-form .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+#timeoff-admin-form .modal-header h2 {
+    margin: 0;
+    color: var(--muted, #7C4F55);
+    font-size: 1.2rem;
+}
+
+#timeoff-admin-form .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+/* --- END NEW Admin Time Off Modal --- */
+
+
+/* --- Time Off Table Styles --- */
+#timeoff-page .table-container {
+    max-height: 60vh;
+    /* Make table scrollable if it gets too long */
+    overflow-y: auto;
+}
+
+#timeoff-page .reason-cell {
+    max-width: 300px;
+    white-space: pre-wrap;
+    /* Allow reason text to wrap */
+    word-break: break-word;
+}
+
+#timeoff-page .action-buttons a {
+    margin: 0 0.4rem;
+    font-size: 1.1rem;
+    transition: color 0.2s ease;
+}
+
+#timeoff-page .action-buttons a.approve-timeoff {
+    color: #28a745;
+}
+
+#timeoff-page .action-buttons a.reject-timeoff {
+    color: #ffc107;
+}
+
+#timeoff-page .action-buttons a.edit-timeoff {
+    color: var(--muted, #7C4F55);
+}
+
+#timeoff-page .action-buttons a.delete-timeoff {
+    color: #dc3545;
+}
+
+#timeoff-page .action-buttons a:hover {
+    transform: scale(1.2);
+}
+
+/* Time Off Table Status Badges */
+.status-badge.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* --- END Time Off Table --- */
+
+
+/* --- General Form/Modal Element Styling --- */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+/* Style all form inputs/selects/textareas consistently */
+.modal-body .form-group select,
+.modal-body .form-group input[type="date"],
+.modal-body .form-group input[type="text"],
+.modal-body .form-group input[type="time"],
+.modal-body .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(124, 79, 85, 0.08);
+    font-size: 0.95rem;
+    font-family: inherit;
+    outline: none;
+    background-color: var(--white);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.modal-body .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.modal-body .form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237C4F55' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
+}
+
+.dark-mode .modal-body .form-group select,
+.dark-mode .modal-body .form-group input[type="date"],
+.dark-mode .modal-body .form-group input[type="text"],
+.dark-mode .modal-body .form-group input[type="time"],
+.dark-mode .modal-body .form-group textarea {
+    background-color: var(--soft, #2a2a2a);
+    border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+    color: var(--text-primary, #EAEAEA);
+}
+
+/* Error Message Styling */
+#timeoff-admin-error-msg {
+    color: #dc3545;
+    font-size: 0.9em;
+    min-height: 1.1em;
+}
+
+
+/* --- NEW: Support Ticket Chat Bubble Styles --- */
+/* (Applies to #support-page) */
+
+.ticket-view .chat-bubble {
+    padding: 0.6rem 0.9rem;
+    border-radius: 14px;
+    max-width: 80%;
+    display: flex;
+    flex-direction: column; /* Arrange content vertically */
+    align-items: flex-start; /* Default alignment */
+    gap: 0; /* Remove gap, footer will handle spacing */
+    word-break: break-word; /* Ensure long text wraps */
+}
+
+/* Stylist's own messages */
+.ticket-view .chat-bubble.stylist {
+    background: var(--primary, #D67A84); /* Stylist's primary color */
+    color: var(--white, #fff);
+    align-self: flex-end; /* Align to the right */
+    border-bottom-right-radius: 3px;
+}
+
+/* Customer/Admin messages */
+.ticket-view .chat-bubble.customer {
+    background: var(--soft, #f9f6f6);
+    color: var(--text-primary, #212121);
+    align-self: flex-start; /* Align to the left */
+    border-bottom-left-radius: 3px;
+}
+.dark-mode .ticket-view .chat-bubble.customer {
+    background: var(--card-bg, #1E1E1E);
+    color: var(--text-primary, #EAEAEA);
+}
+
+/* Sender Name */
+.ticket-view .chat-sender-name {
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: 4px;
+    opacity: 0.8;
+}
+.ticket-view .chat-bubble.customer .chat-sender-name {
+    color: var(--muted, #7C4F55); /* Muted color on light background */
+}
+.dark-mode .ticket-view .chat-bubble.customer .chat-sender-name {
+    color: var(--text-secondary, #A0A0A0);
+}
+.ticket-view .chat-bubble.stylist .chat-sender-name {
+    color: rgba(255, 255, 255, 0.8); /* Light name on primary background */
+}
+
+/* Message Text */
+.ticket-view .message-text {
+    flex-grow: 1;
+    white-space: pre-wrap; /* Respect line breaks in message */
+}
+
+/* Footer (Timestamp & Ticks) */
+.ticket-view .chat-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 4px;
+    align-self: flex-end; /* Push footer to the bottom right */
+}
+
+.ticket-view .chat-timestamp {
+    font-size: 0.75em;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+.ticket-view .chat-bubble.stylist .chat-timestamp {
+     color: rgba(255, 255, 255, 0.8); /* Light timestamp */
+}
+
+/* Ticks */
+.ticket-view .chat-bubble .ticks {
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+}
+.ticket-view .chat-bubble.stylist .ticks {
+    color: rgba(255, 255, 255, 0.6); /* Light ticks */
+}
+.ticket-view .chat-bubble.stylist .ticks.read {
+    color: #4fc3f7; /* Blue 'read' color */
+}
+/* --- END NEW Chat Bubble Styles --- */

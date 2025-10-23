@@ -5,11 +5,132 @@
 
 // Import Firebase functions and your config
 import { auth, db, storage } from './firebase-config.js';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs, FieldValue ,  arrayUnion} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs, FieldValue, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- NEW: TOAST NOTIFICATION FUNCTION ---
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            console.error("Toast container not found!");
+            return;
+        }
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+        setTimeout(() => { toast.classList.add('show'); }, 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                if (toast.parentNode) { toast.remove(); }
+            }, { once: true });
+        }, 3000);
+    }
+
+    // --- NEW: Generic Confirmation Modal Function ---
+    let confirmResolve = null;
+    function showConfirmationModal(message = "Are you sure?", confirmButtonClass = 'btn-danger', confirmButtonText = 'Confirm') {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('confirmation-modal-overlay');
+            const msgElement = document.getElementById('confirmation-message');
+            const proceedBtn = document.getElementById('confirm-proceed-btn');
+            if (!overlay || !msgElement || !proceedBtn) {
+                console.error("Confirmation modal elements not found!");
+                resolve(false); return;
+            }
+            msgElement.textContent = message;
+            proceedBtn.className = `btn ${confirmButtonClass}`; // Ensure 'btn' class
+            proceedBtn.textContent = confirmButtonText;
+            overlay.classList.add('visible');
+            confirmResolve = resolve;
+        });
+    }
+
+    // --- NEW: Event Listeners for Confirmation Modal Buttons ---
+    const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+    const confirmProceedBtn = document.getElementById('confirm-proceed-btn');
+    const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
+
+    confirmCancelBtn?.addEventListener('click', () => {
+        confirmationModalOverlay?.classList.remove('visible');
+        if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+    });
+
+    confirmProceedBtn?.addEventListener('click', () => {
+        confirmationModalOverlay?.classList.remove('visible');
+        if (confirmResolve) { confirmResolve(true); confirmResolve = null; }
+    });
+    // --- END NEW Confirmation Logic ---
+
+    // --- NEW: Reason Prompt Modal Logic ---
+    let reasonPromptResolve = null;
+    const reasonPromptOverlay = document.getElementById('reason-prompt-modal-overlay');
+    const reasonPromptInput = document.getElementById('reason-prompt-input');
+    const reasonPromptError = document.getElementById('reason-prompt-error');
+    const reasonPromptTitle = document.getElementById('reason-prompt-title');
+    const reasonPromptMessage = document.getElementById('reason-prompt-message');
+    const reasonPromptCancelBtn = document.getElementById('reason-prompt-cancel-btn');
+    const reasonPromptSubmitBtn = document.getElementById('reason-prompt-submit-btn');
+    const reasonPromptCloseBtn = document.getElementById('reason-prompt-close-btn');
+
+    function showReasonPromptModal(config = {}) {
+        return new Promise((resolve) => {
+            if (!reasonPromptOverlay || !reasonPromptInput || !reasonPromptError || !reasonPromptTitle || !reasonPromptMessage || !reasonPromptSubmitBtn) {
+                console.error("Reason prompt modal elements not found!");
+                resolve(null); // Resolve with null if modal can't be shown
+                return;
+            }
+
+            // Apply configuration
+            reasonPromptTitle.textContent = config.title || 'Provide Reason';
+            reasonPromptMessage.textContent = config.message || 'Please provide a reason:';
+            reasonPromptInput.value = ''; // Clear previous input
+            reasonPromptError.textContent = ''; // Clear previous errors
+            reasonPromptInput.placeholder = config.placeholder || 'Enter reason here...';
+            reasonPromptSubmitBtn.textContent = config.submitText || 'Submit';
+            reasonPromptSubmitBtn.className = `btn ${config.submitClass || 'btn-danger'}`; // Apply custom class or default
+
+            reasonPromptOverlay.classList.add('visible');
+            reasonPromptInput.focus();
+            reasonPromptResolve = resolve; // Store resolve function
+        });
+    }
+
+    // Handlers for Reason Prompt buttons
+    reasonPromptCancelBtn?.addEventListener('click', () => {
+        reasonPromptOverlay?.classList.remove('visible');
+        if (reasonPromptResolve) {
+            reasonPromptResolve(null); // Resolve with null on cancel
+            reasonPromptResolve = null;
+        }
+    });
+
+    reasonPromptCloseBtn?.addEventListener('click', () => {
+        reasonPromptOverlay?.classList.remove('visible');
+        if (reasonPromptResolve) {
+            reasonPromptResolve(null); // Resolve with null on close
+            reasonPromptResolve = null;
+        }
+    });
+
+    reasonPromptSubmitBtn?.addEventListener('click', () => {
+        const reason = reasonPromptInput?.value.trim();
+        if (!reason) {
+            if (reasonPromptError) reasonPromptError.textContent = 'Reason cannot be empty.';
+            return; // Don't close if reason is empty
+        }
+        reasonPromptOverlay?.classList.remove('visible');
+        if (reasonPromptResolve) {
+            reasonPromptResolve(reason); // Resolve with the reason text
+            reasonPromptResolve = null;
+        }
+    });
+    // --- END Reason Prompt Modal Logic ---
+
     // Get all the necessary elements from the page
     const sidebar = document.querySelector('.sidebar');
     const hamburgerMenu = document.getElementById('hamburger-menu');
@@ -21,9 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const appointmentsContainer = document.getElementById('appointments-container');
     const newBookingsContainer = document.getElementById('new-bookings-container');
     const inventoryContainer = document.getElementById('inventory-container');
-    const ordersTableBody = document.getElementById('orders-table-body');
     const profileForm = document.getElementById('profile-form');
-    
+
     const modalOverlay = document.getElementById('booking-modal-overlay');
     const modal = modalOverlay.querySelector('.modal');
     const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -49,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileImg = document.getElementById('profile-img');
     const profilePictureUpload = document.getElementById('profile-picture-upload');
     const removePictureBtn = document.getElementById('remove-picture-btn');
+    const profileErrorMsg = document.getElementById('profile-error-msg'); // Added for profile errors
 
     const ordersContainer = document.getElementById('orders-container');
     const orderDetailsModalOverlay = document.getElementById('order-details-modal-overlay');
@@ -69,11 +190,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const supportChatForm = document.getElementById('support-chat-form');
     const supportChatInput = document.getElementById('support-chat-input');
 
+    // --- NEW: Time Off Elements ---
+    const requestTimeOffBtn = document.getElementById('request-timeoff-btn');
+    const timeOffRequestsContainer = document.getElementById('timeoff-requests-container');
+    const timeOffRequestModalOverlay = document.getElementById('timeoff-request-modal-overlay');
+    const timeOffModalCloseBtn = document.getElementById('timeoff-modal-close-btn');
+    const timeOffRequestForm = document.getElementById('timeoff-request-form');
+    const timeOffErrorMsg = document.getElementById('timeoff-error-msg');
+    // --- END NEW Time Off Elements ---
+
     let currentStylistId = null;
     let currentUserData = null;
     let currentOpenBookingId = null; // To keep track of which booking is open in the modal
     let unsubscribeChat; // To stop listening for chat messages when the modal closes
-    let newProfileImageFile = null; 
+    let newProfileImageFile = null;
     let unsubscribeSupportChat; // --- NEW: For support chat listener
     let currentOpenTicketId = null; // --- NEW: To track the open support ticket
 
@@ -92,10 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(targetId);
         });
     });
-    
+
     // This function will be called when a nav link is clicked
     function handleNavigation(targetId) {
         const targetPage = document.getElementById(`${targetId}-page`);
+        const activeLink = document.querySelector(`.nav-link[href="#${targetId}"]`);
 
         // Update the active link style in the sidebar
         navLinks.forEach(navLink => navLink.classList.remove('active'));
@@ -127,6 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'orders':
                     fetchProductOrders();
                     break;
+                case 'timeoff': // --- NEW ---
+                    fetchTimeOffRequests(currentStylistId);
+                    break;
                 case 'profile':
                     displayUserProfile();
                     break;
@@ -150,11 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
             bookings: { title: 'New Booking Requests', subtitle: 'Review and respond to new appointment requests.' },
             inventory: { title: 'Salon Inventory', subtitle: 'View current stock levels for all products.' },
             orders: { title: 'Product Orders', subtitle: 'Manage and confirm customer product orders.' },
+            timeoff: { title: 'My Time Off', subtitle: 'View and request time off.' }, // --- NEW ---
             profile: { title: 'My Profile', subtitle: 'Update your personal details.' },
             support: { title: 'Support Tickets', subtitle: 'View and reply to your support conversations.' }
         };
 
-        if (titles[pageId]) {
+        if (titles[pageId] && pageTitle && pageSubtitle) { // Added null checks
             pageTitle.textContent = titles[pageId].title;
             pageSubtitle.textContent = titles[pageId].subtitle;
         }
@@ -164,29 +299,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Check user's login state
     onAuthStateChanged(auth, async user => {
-            if (user) {
-                currentStylistId = user.uid;
-                // Fetch user data once and store it
-                const userDocRef = doc(db, "users", currentStylistId);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    currentUserData = userDoc.data();
-                    // --- NEW: Also display the user's profile when the page loads ---
-                    displayUserProfile(); 
-                }
-                console.log("Stylist authenticated with UID:", currentStylistId);
-                fetchStylistSchedule(currentStylistId); // Load the default page
-            } else {
-                console.log("No user logged in, redirecting...");
-                window.location.href = 'login.html';
+        if (user) {
+            currentStylistId = user.uid;
+            // Fetch user data once and store it
+            const userDocRef = doc(db, "users", currentStylistId);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                currentUserData = userDoc.data();
+                // --- NEW: Also display the user's profile when the page loads ---
+                displayUserProfile();
             }
-        });
+            console.log("Stylist authenticated with UID:", currentStylistId);
+            fetchStylistSchedule(currentStylistId); // Load the default page
+        } else {
+            console.log("No user logged in, redirecting...");
+            window.location.href = 'login.html';
+        }
+    });
 
     // 4. Function to get the stylist's confirmed appointments
-   async function fetchStylistSchedule(stylistId) {
+    async function fetchStylistSchedule(stylistId) {
         appointmentsContainer.innerHTML = '<p>Loading schedule...</p>';
         const q = query(collection(db, "bookings"), where("stylistId", "==", stylistId), where("status", "==", "Confirmed"));
-        
+
         onSnapshot(q, async (querySnapshot) => {
             if (querySnapshot.empty) {
                 appointmentsContainer.innerHTML = '<p>You have no confirmed appointments.</p>';
@@ -218,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 5. Function to get new booking requests for the stylist
-   async function fetchNewBookings(stylistId) {
+    async function fetchNewBookings(stylistId) {
         newBookingsContainer.innerHTML = '<p>Loading new requests...</p>';
         const q = query(collection(db, "bookings"), where("status", "==", "Pending"));
 
@@ -234,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isDeclinedByCurrentUser) {
                     return null; // Skip this booking entirely
                 }
-                
+
                 const hairstyleDocRef = doc(db, "hairstyles", booking.hairstyleId);
                 const hairstyleDoc = await getDoc(hairstyleDocRef);
 
@@ -292,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 newBookingsLink.querySelector('.notification-dot').style.display = 'block';
                 newBookingsContainer.innerHTML = cardsHtml;
             } else {
-                 if (notificationDot) {
+                if (notificationDot) {
                     notificationDot.style.display = 'none';
                 }
                 newBookingsContainer.innerHTML = '<p>No new booking requests for you.</p>';
@@ -304,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchInventory() {
         inventoryContainer.innerHTML = '<p>Loading inventory...</p>';
         const q = query(collection(db, "products"));
-        
+
         onSnapshot(q, (querySnapshot) => {
             let html = '';
             if (querySnapshot.empty) {
@@ -329,28 +464,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 7. Function to fetch product orders
     async function fetchProductOrders() {
-            ordersContainer.innerHTML = '<p>Loading active orders...</p>';
-            const q = query(collection(db, "product_orders"), where("status", "in", ["Pending Pickup", "Ready for Pickup"]));
+        ordersContainer.innerHTML = '<p>Loading active orders...</p>';
+        const q = query(collection(db, "product_orders"), where("status", "in", ["Pending Pickup", "Ready for Pickup"]));
 
-            onSnapshot(q, (querySnapshot) => {
-                let html = '';
-                if (querySnapshot.empty) {
-                    html = '<p>No active orders found.</p>';
-                } else {
-                    querySnapshot.forEach(doc => {
-                        const order = doc.data();
-                        let statusClass = order.status === 'Pending Pickup' ? 'status-pending' : 'status-ready';
-                        
-                        // Generate stacked images HTML
-                        let imagesHtml = '';
-                        if (order.items && order.items.length > 0) {
-                            // Show up to 3 images
-                            order.items.slice(0, 3).forEach(item => {
-                                imagesHtml += `<img src="${item.imageUrl}" alt="${item.name}">`;
-                            });
-                        }
+        onSnapshot(q, (querySnapshot) => {
+            let html = '';
+            if (querySnapshot.empty) {
+                html = '<p>No active orders found.</p>';
+            } else {
+                querySnapshot.forEach(doc => {
+                    const order = doc.data();
+                    let statusClass = order.status === 'Pending Pickup' ? 'status-pending' : 'status-ready';
 
-                        html += `
+                    // Generate stacked images HTML
+                    let imagesHtml = '';
+                    if (order.items && order.items.length > 0) {
+                        // Show up to 3 images
+                        order.items.slice(0, 3).forEach(item => {
+                            imagesHtml += `<img src="${item.imageUrl}" alt="${item.name}">`;
+                        });
+                    }
+
+                    html += `
                             <div class="order-card" data-order-id="${doc.id}">
                                 <div class="order-card-images">${imagesHtml}</div>
                                 <div class="card-content">
@@ -362,36 +497,152 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                         `;
-                    });
-                }
-                ordersContainer.innerHTML = html;
+                });
+            }
+            ordersContainer.innerHTML = html;
 
-                // --- Notification Dot Logic for Orders ---
-                let notificationDot = ordersLink.querySelector('.notification-dot');
-                if (!querySnapshot.empty) { // If there are pending orders
-                    if (!notificationDot) {
-                        notificationDot = document.createElement('span');
-                        notificationDot.className = 'notification-dot';
-                        ordersLink.appendChild(notificationDot);
-                    }
-                    notificationDot.style.display = 'block';
-                } else { // If there are no pending orders
-                    if (notificationDot) {
-                        notificationDot.style.display = 'none';
-                    }
+            // --- Notification Dot Logic for Orders ---
+            let notificationDot = ordersLink.querySelector('.notification-dot');
+            if (!querySnapshot.empty) { // If there are pending orders
+                if (!notificationDot) {
+                    notificationDot = document.createElement('span');
+                    notificationDot.className = 'notification-dot';
+                    ordersLink.appendChild(notificationDot);
                 }
-            });
-        }
-    
+                notificationDot.style.display = 'block';
+            } else { // If there are no pending orders
+                if (notificationDot) {
+                    notificationDot.style.display = 'none';
+                }
+            }
+        });
+    }
+
     // 8. Function to display user profile data
     function displayUserProfile() {
-        if(currentUserData) {
+        if (currentUserData) {
             profileForm.name.value = currentUserData.name || '';
             profileForm.email.value = currentUserData.email || '';
             profileForm.phone.value = currentUserData.phone || '';
             profileImg.src = currentUserData.imageUrl || 'https://placehold.co/150x150/D67A84/FFFFFF?text=G';
         }
     }
+
+    // --- NEW: 9. Time Off Functions ---
+
+    // Fetch and display stylist's time off requests
+    function fetchTimeOffRequests(stylistId) {
+        if (!timeOffRequestsContainer) return;
+        timeOffRequestsContainer.innerHTML = '<tr><td colspan="4">Loading requests...</td></tr>';
+        const q = query(collection(db, "timeOffRequests"), where("stylistId", "==", stylistId), orderBy("timestamp", "desc"));
+
+        onSnapshot(q, (snapshot) => {
+            if (snapshot.empty) {
+                timeOffRequestsContainer.innerHTML = '<tr><td colspan="4">You have no time off requests.</td></tr>';
+                return;
+            }
+            let requestsHtml = '';
+            snapshot.forEach(doc => {
+                const request = doc.data();
+                const statusClass = `status-${request.status.toLowerCase()}`;
+                requestsHtml += `
+                    <tr>
+                        <td>${request.startDate}</td>
+                        <td>${request.endDate}</td>
+                        <td>${request.reason}</td>
+                        <td><span class="status-badge ${statusClass}">${request.status}</span></td>
+                    </tr>
+                `;
+            });
+            timeOffRequestsContainer.innerHTML = requestsHtml;
+        }, (error) => {
+            console.error("Error fetching time off requests:", error);
+            timeOffRequestsContainer.innerHTML = '<tr><td colspan="4">Error loading requests.</td></tr>';
+        });
+    }
+
+    // Open the time off request modal
+    function openTimeOffRequestModal() {
+        if (!timeOffRequestModalOverlay) return;
+        timeOffRequestForm?.reset(); // Clear form
+        timeOffErrorMsg.textContent = ''; // Clear previous errors
+        timeOffRequestModalOverlay.style.display = 'flex';
+        setTimeout(() => { timeOffRequestModalOverlay.style.opacity = '1'; }, 10);
+    }
+
+    // Close the time off request modal
+    function closeTimeOffRequestModal() {
+        if (!timeOffRequestModalOverlay) return;
+        timeOffRequestModalOverlay.style.opacity = '0';
+        setTimeout(() => { timeOffRequestModalOverlay.style.display = 'none'; }, 200);
+    }
+
+    // Handle form submission for time off request
+    async function handleTimeOffSubmit(e) {
+        e.preventDefault();
+        if (!currentStylistId || !currentUserData) {
+            timeOffErrorMsg.textContent = 'User data not loaded. Cannot submit request.';
+            return;
+        }
+
+        const startDateStr = timeOffRequestForm.startDate.value;
+        const endDateStr = timeOffRequestForm.endDate.value;
+        const reason = timeOffRequestForm.reason.value.trim();
+        timeOffErrorMsg.textContent = ''; // Clear previous errors
+
+        // --- Validation ---
+        if (!startDateStr || !endDateStr || !reason) {
+            timeOffErrorMsg.textContent = 'Please fill in all fields.';
+            return;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        const startDate = new Date(startDateStr + 'T00:00:00'); // Ensure comparison treats date as start of day
+        const endDate = new Date(endDateStr + 'T00:00:00');
+
+        if (startDate < today) {
+            timeOffErrorMsg.textContent = 'Start date cannot be in the past.';
+            return;
+        }
+
+        if (endDate < startDate) {
+            timeOffErrorMsg.textContent = 'End date cannot be before the start date.';
+            return;
+        }
+        // --- End Validation ---
+
+        const submitButton = timeOffRequestForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Submitting...';
+
+        const requestData = {
+            stylistId: currentStylistId,
+            stylistName: currentUserData.name,
+            startDate: startDateStr,
+            endDate: endDateStr,
+            reason: reason,
+            status: "pending", // Use lowercase for consistency
+            timestamp: serverTimestamp()
+        };
+
+        try {
+            await addDoc(collection(db, "timeOffRequests"), requestData);
+            showToast("Time off request submitted.", "success"); // Use showToast
+            closeTimeOffRequestModal();
+        } catch (error) {
+            console.error("Error submitting time off request:", error);
+            timeOffErrorMsg.textContent = 'Failed to submit request. Please try again.';
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit Request';
+        }
+    }
+    requestTimeOffBtn?.addEventListener('click', openTimeOffRequestModal);
+    timeOffModalCloseBtn?.addEventListener('click', closeTimeOffRequestModal);
+    timeOffRequestForm?.addEventListener('submit', handleTimeOffSubmit);
+    // --- END NEW Time Off Logic ---
+
 
     // 9. All functions for the support ticket system ---
 
@@ -448,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openSupportConversation(ticketId, status) {
         currentOpenTicketId = ticketId;
         // Re-fetch tickets to highlight the active one
-        fetchSupportTickets(currentStylistId); 
+        fetchSupportTickets(currentStylistId);
 
         supportChatForm.style.display = 'flex';
         ticketConversationContainer.innerHTML = '<p>Loading conversation...</p>';
@@ -481,23 +732,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-              // 3. We build the HTML with the data we have RIGHT NOW.
+            // 3. We build the HTML with the data we have RIGHT NOW.
             let messagesHtml = '';
             docs.forEach(doc => {
                 const message = doc.data();
                 const bubbleClass = message.senderUid === currentStylistId ? 'stylist' : 'customer';
-                
+
                 let statusTicks = '';
                 if (bubbleClass === 'stylist') {
-                    statusTicks = getStatusTicks(message.status || 'SENT'); 
+                    statusTicks = getStatusTicks(message.status || 'SENT');
                 }
 
                 messagesHtml += `
-                    <div class="chat-bubble ${bubbleClass}">
-                        <span class="message-text">${message.messageText}</span>
-                        ${statusTicks}
-                    </div>
-                `;
+    <div class="chat-bubble ${bubbleClass}">
+        <div class="chat-sender-name">${message.senderName}</div>
+        <span class="message-text">${message.messageText}</span>
+        <div class="chat-footer">
+            <span class="chat-timestamp">${formatTimestamp(message.timestamp)}</span>
+            ${statusTicks}
+        </div>
+    </div>
+`;
             });
             ticketConversationContainer.innerHTML = messagesHtml;
             ticketConversationContainer.scrollTop = ticketConversationContainer.scrollHeight;
@@ -513,12 +768,12 @@ document.addEventListener('DOMContentLoaded', () => {
             openSupportConversation(ticketId, ticketStatus);
         }
     });
-    
+
     // Handle sending a reply in an open support ticket
-    supportChatForm.addEventListener('submit', async (e) => {
+    supportChatForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const message = supportChatInput.value.trim();
-        if (message === '' || !currentOpenTicketId) return;
+        const message = supportChatInput?.value.trim(); // Add null check
+        if (message === '' || !currentOpenTicketId || !supportChatInput) return;
 
         const repliesRef = collection(db, "support_messages", currentOpenTicketId, "replies");
         try {
@@ -532,14 +787,14 @@ document.addEventListener('DOMContentLoaded', () => {
             supportChatInput.value = '';
         } catch (error) {
             console.error("Error sending support reply:", error);
-            alert("Failed to send reply.");
+            showToast("Failed to send reply.", "error"); // Use showToast
         }
     });
 
     async function markPreviousMessagesAsRead(ticketId) {
         const repliesRef = collection(db, "support_messages", ticketId, "replies");
         const q = query(repliesRef, where("senderUid", "==", currentStylistId), where("status", "!=", "Read"));
-        
+
         try {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach(docSnap => {
@@ -552,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- New Ticket Modal Logic ---
-     function openNewTicketModal() {
+    function openNewTicketModal() {
         newTicketModalOverlay.style.display = 'flex';
         setTimeout(() => {
             newTicketModalOverlay.style.opacity = '1';
@@ -569,10 +824,10 @@ document.addEventListener('DOMContentLoaded', () => {
     newTicketBtn.addEventListener('click', openNewTicketModal);
     newTicketModalCloseBtn.addEventListener('click', closeNewTicketModal);
 
-    newTicketForm.addEventListener('submit', async (e) => {
+    newTicketForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const message = newTicketForm.message.value.trim();
-        if (message === '' || !currentUserData) return;
+        if (message === '' || !currentUserData || !currentStylistId) return;
 
         try {
             await addDoc(collection(db, "support_messages"), {
@@ -582,17 +837,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 senderEmail: currentUserData.email,
                 status: "New",
                 timestamp: serverTimestamp(),
-                // Initialize the participants array with the creator's ID
                 participantUids: [currentStylistId]
             });
-            alert('Support ticket sent successfully!');
+            showToast('Support ticket sent successfully!', 'success'); // Use showToast
             closeNewTicketModal();
         } catch (error) {
             console.error("Error creating new ticket:", error);
-            alert("Failed to send ticket.");
+            showToast("Failed to send ticket.", "error"); // Use showToast
         }
     });
-    
+
     // --- Event Delegation for Actions ---
     document.getElementById('content-area').addEventListener('click', async (e) => {
         const target = e.target;
@@ -623,55 +877,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Check if an action button inside a booking card was clicked
         if (target.matches('.action-btn')) {
-            const bookingId = target.dataset.id; // Used for service bookings
-            const orderId = target.dataset.id; // Used for product orders
+            const bookingCardPending = target.closest('.booking-card.pending');
+            if (bookingCardPending) {
+                const bookingId = target.dataset.id;
+                if (!bookingId) return;
+                const bookingRef = doc(db, "bookings", bookingId);
 
-            if (!bookingId) return; // Button must have a booking ID
+                if (target.matches('.accept')) {
+                    console.log(`Accept clicked for ${bookingId}`);
+                    const confirmed = await showConfirmationModal('Are you sure you want to accept this booking?', 'btn-primary', 'Accept');
+                    if (confirmed) {
+                        try {
+                            await updateDoc(bookingRef, {
+                                status: "Confirmed",
+                                stylistId: currentStylistId,
+                                stylistName: currentUserData.name,
+                                workerUnreadCount: 0
+                            });
+                            showToast('Booking accepted!', 'success'); // Use showToast
+                        } catch (error) {
+                            console.error("Error accepting booking: ", error);
+                            showToast("Failed to accept booking.", "error"); // Use showToast
+                        }
+                    }
+                } else if (target.matches('.decline')) {
+                    console.log(`Decline clicked for ${bookingId}`);
+                    const bookingDoc = await getDoc(bookingRef);
+                    if (!bookingDoc.exists()) return;
+                    const bookingData = bookingDoc.data();
 
-             if (target.matches('.accept') && !target.matches('.mark-ready') && !target.matches('.mark-collected')) {
-                if (confirm('Are you sure you want to accept this booking?')) {
-                    const bookingRef = doc(db, "bookings", bookingId);
-                    try {
-                        await updateDoc(bookingRef, {
-                            status: "Confirmed",
-                            stylistId: currentStylistId,
-                            stylistName: currentUserData.name
+                    if (bookingData.stylistName === "Any Available") {
+                        const confirmed = await showConfirmationModal('Decline this booking for yourself? (It will remain available for others)', 'btn-danger', 'Decline');
+                        if (confirmed) {
+                            await updateDoc(bookingRef, { declinedBy: arrayUnion(currentStylistId) });
+                            showToast('Booking declined for you.', 'success'); // Use showToast
+                        }
+                    } else {
+                        console.log(`Dwecline clicked for ${bookingId}`);
+                        const reason = await showReasonPromptModal({
+                            title: 'Decline Booking',
+                            message: 'Please provide a reason for declining:',
+                            submitText: 'Decline Booking',
+                            submitClass: 'btn-danger'
                         });
-                        alert('Booking accepted and added to your schedule!');
-                    } catch (error) {
-                        console.error("Error accepting booking: ", error);
-                        alert("Failed to accept booking. Please try again.");
+                        if (reason) { // Only proceed if a reason was submitted (not null)
+                            const confirmed = await showConfirmationModal(`Decline booking with reason: "${reason}"?`, 'btn-danger', 'Decline');
+                            if (confirmed) {
+                                try {
+                                    await updateDoc(bookingRef, { status: "Declined", declineReason: reason });
+                                    showToast('Booking declined.', 'success'); // Use showToast
+                                } catch (error) { console.error("Error declining booking:", error); showToast("Failed to decline.", "error"); }
+                            }
+                        } else { console.log("Decline cancelled by user."); }
                     }
                 }
+                return;
             }
-
-            if (target.matches('.action-btn.decline')) {
-            const bookingRef = doc(db, "bookings", bookingId);
-            const bookingDoc = await getDoc(bookingRef);
-            const bookingData = bookingDoc.data();
-
-            // --- NEW LOGIC: Check if it's an "Any Available" booking ---
-            if (bookingData.stylistName === "Any Available") {
-                // If so, just add the stylist's ID to the 'declinedBy' array
-                await updateDoc(bookingRef, {
-                    declinedBy: arrayUnion(currentStylistId) // arrayUnion is a special Firebase function
-                });
-                alert('Booking declined. It will remain available for other stylists.');
-            } else {
-                // Otherwise, use the old logic for directly assigned bookings
-                const reason = prompt("Please provide a reason for declining this booking:");
-                if (reason) { 
-                    await updateDoc(bookingRef, {
-                        status: "Declined",
-                        cancellationReason: reason
-                    });
-                    alert('Booking declined.');
-                }
-            }
-            // If the user clicks "Cancel" on the prompt, nothing happens.
-            
-        }
-    
         }
     });
 
@@ -680,8 +941,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function openProductModal(productId) {
         productModalOverlay.style.display = 'flex';
         setTimeout(() => {
-             productModalOverlay.style.opacity = '1';
-             productModal.style.transform = 'scale(1)';
+            productModalOverlay.style.opacity = '1';
+            productModal.style.transform = 'scale(1)';
         }, 10);
 
         const productRef = doc(db, "products", productId);
@@ -724,10 +985,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function openOrderModal(orderId) {
         orderDetailsModalOverlay.style.display = 'flex';
         setTimeout(() => {
-             orderDetailsModalOverlay.style.opacity = '1';
-             orderModal.style.transform = 'scale(1)';
+            orderDetailsModalOverlay.style.opacity = '1';
+            orderModal.style.transform = 'scale(1)';
         }, 10);
-        
+
         const orderRef = doc(db, "product_orders", orderId);
         const orderSnap = await getDoc(orderRef);
 
@@ -773,23 +1034,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     orderModalCloseBtn.addEventListener('click', closeOrderModal);
 
-    // Add a new event listener for the order modal footer
-    orderModalFooter.addEventListener('click', async (e) => {
+    // Order Modal Footer Buttons Listener
+    orderModalFooter?.addEventListener('click', async (e) => {
         const target = e.target;
         if (target.matches('.action-btn')) {
             const orderId = target.dataset.id;
             const orderRef = doc(db, "product_orders", orderId);
+            let newStatus = '';
+            let confirmMessage = '';
+            let successMessage = '';
 
             if (target.id === 'modal-mark-ready') {
-                await updateDoc(orderRef, { status: "Ready for Pickup" });
-                alert("Order status updated!");
-                closeOrderModal();
+                newStatus = "Ready for Pickup";
+                confirmMessage = "Mark this order as ready for pickup?";
+                successMessage = "Order marked as ready!";
+            } else if (target.id === 'modal-mark-collected') {
+                newStatus = "Completed";
+                confirmMessage = "Mark this order as collected and complete?";
+                successMessage = "Order marked as complete!";
             }
 
-            if (target.id === 'modal-mark-collected') {
-                await updateDoc(orderRef, { status: "Completed" });
-                alert("Order marked as complete!");
-                closeOrderModal();
+            if (newStatus && confirmMessage) {
+                const confirmed = await showConfirmationModal(confirmMessage, 'btn-primary', 'Confirm');
+                if (confirmed) {
+                    try {
+                        await updateDoc(orderRef, { status: newStatus });
+                        showToast(successMessage, 'success'); // Use showToast
+                        closeOrderModal();
+                    } catch (error) {
+                        console.error("Error updating order status:", error);
+                        showToast("Failed to update order status.", "error"); // Use showToast
+                    }
+                }
             }
         }
     });
@@ -799,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentStylistId) return;
         const messagesRef = collection(db, "bookings", bookingId, "messages");
         const q = query(messagesRef, where("senderUid", "==", currentStylistId), where("status", "!=", "READ"));
-        
+
         try {
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
@@ -866,7 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-     // --- NEW HELPER FUNCTION FOR TIMESTAMPS ---
+    // --- NEW HELPER FUNCTION FOR TIMESTAMPS ---
     function formatTimestamp(fbTimestamp) {
         if (!fbTimestamp || !fbTimestamp.toDate) {
             return '';
@@ -909,10 +1185,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalCloseBtn.addEventListener('click', closeBookingModal);
 
-    chatForm.addEventListener('submit', async (e) => {
+    chatForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const messageText = chatMessageInput.value.trim();
-        if (messageText === '' || !currentOpenBookingId) return;
+        const messageText = chatMessageInput?.value.trim(); // Add null check
+        if (messageText === '' || !currentOpenBookingId || !chatMessageInput) return;
 
         const messagesRef = collection(db, "bookings", currentOpenBookingId, "messages");
         try {
@@ -921,43 +1197,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageText: messageText,
                 senderName: currentUserData.name,
                 senderUid: currentStylistId,
-                status: "SENT", // Set initial status
+                status: "SENT",
                 timestamp: serverTimestamp()
             });
             chatMessageInput.value = '';
         } catch (error) {
             console.error("Error sending message: ", error);
-            alert("Could not send message.");
+            showToast("Could not send message.", "error"); // Use showToast
         }
     });
 
-    completeBookingBtn.addEventListener('click', async () => {
+    completeBookingBtn?.addEventListener('click', async () => {
         if (!currentOpenBookingId) return;
-        if (confirm('Are you sure you want to mark this booking as complete?')) {
+        const confirmed = await showConfirmationModal('Mark this booking as complete?', 'btn-primary', 'Complete');
+        if (confirmed) {
             const bookingRef = doc(db, "bookings", currentOpenBookingId);
-            await updateDoc(bookingRef, { status: 'Completed' });
-            alert('Booking marked as complete!');
-            closeBookingModal();
+            try {
+                await updateDoc(bookingRef, { status: 'Completed', workerUnreadCount: 0 });
+                showToast('Booking marked as complete!', 'success'); // Use showToast
+                closeBookingModal();
+            } catch (error) {
+                console.error("Error completing booking:", error);
+                showToast("Failed to complete booking.", "error"); // Use showToast
+            }
         }
     });
 
-    cancelBookingBtn.addEventListener('click', async () => {
+    cancelBookingBtn?.addEventListener('click', async () => {
         if (!currentOpenBookingId) return;
-        const reason = prompt("Please provide a reason for cancellation:");
-        if (reason) { // Only proceed if the user provides a reason
-            const bookingRef = doc(db, "bookings", currentOpenBookingId);
-            await updateDoc(bookingRef, {
-                status: 'Cancelled',
-                cancellationReason: reason // Storing the reason in Firestore
-            });
-            alert('Booking has been cancelled.');
-            closeBookingModal();
+        // --- MODIFIED: Use custom prompt ---
+        const reason = await showReasonPromptModal({
+            title: 'Cancel Booking',
+            message: 'Please provide a reason for cancellation:',
+            submitText: 'Confirm Cancellation',
+            submitClass: 'btn-danger'
+        });
+        if (reason) { // Only proceed if a reason was submitted
+            const confirmed = await showConfirmationModal(`Cancel booking with reason: "${reason}"?`, 'btn-danger', 'Cancel Booking');
+            if (confirmed) {
+                const bookingRef = doc(db, "bookings", currentOpenBookingId);
+                try {
+                    await updateDoc(bookingRef, {
+                        status: 'Cancelled',
+                        cancellationReason: reason,
+                        workerUnreadCount: 0
+                    });
+                    showToast('Booking has been cancelled.', 'success'); // Use showToast
+                    closeBookingModal();
+                } catch (error) {
+                    console.error("Error cancelling booking:", error);
+                    showToast("Failed to cancel booking.", "error"); // Use showToast
+                }
+            }
+        } else {
+            console.log("Cancellation cancelled by user.");
         }
     });
 
-    
+
     // --- NEW: Profile Picture and Form Logic ---
-    
+
     // Create an instant preview when a new image is selected
     profilePictureUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -972,77 +1271,81 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Handle the "Save Changes" button click
-    profileForm.addEventListener('submit', async (e) => {
+    profileForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!currentStylistId) return;
 
         const newName = profileForm.name.value.trim();
         const newPhone = profileForm.phone.value.trim();
+        if (profileErrorMsg) profileErrorMsg.textContent = ''; // Clear previous errors
 
-         if (newName.length < 2) {
-            alert('Please enter a valid name (at least 2 characters).');
-            return; // Stop the function if validation fails
+        if (newName.length < 2) {
+            if (profileErrorMsg) profileErrorMsg.textContent = 'Please enter a valid name (at least 2 characters).';
+            return;
         }
-        
-        // Simple South African phone number validation (e.g., starts with 0, 10 digits total)
         const phoneRegex = /^0\d{9}$/;
         if (!phoneRegex.test(newPhone)) {
-            alert('Please enter a valid 10-digit South African phone number (e.g., 0821234567).');
-            return; // Stop the function if validation fails
+            if (profileErrorMsg) profileErrorMsg.textContent = 'Please enter a valid 10-digit SA phone number (e.g., 082...).';
+            return;
         }
 
         const userDocRef = doc(db, "users", currentStylistId);
+        const submitButton = profileForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true; // Disable button during save
 
         try {
-            // If there's a new image file, upload it first
+            let downloadURL = currentUserData.imageUrl; // Keep old URL unless new file uploaded
             if (newProfileImageFile) {
                 const storageRef = ref(storage, `profile_pictures/${currentStylistId}`);
                 await uploadBytes(storageRef, newProfileImageFile);
-                const downloadURL = await getDownloadURL(storageRef);
-                
-                // Now update Firestore with the new image URL along with other data
-                await updateDoc(userDocRef, {
-                    name: newName,
-                    phone: newPhone,
-                    imageUrl: downloadURL
-                });
+                downloadURL = await getDownloadURL(storageRef);
                 newProfileImageFile = null; // Reset after upload
-            } else {
-                // Otherwise, just update the name and phone
-                await updateDoc(userDocRef, {
-                    name: newName,
-                    phone: newPhone
-                });
             }
-            alert('Profile updated successfully!');
-            // You might want to refetch the user data here to keep currentUserData fresh
+
+            await updateDoc(userDocRef, {
+                name: newName,
+                phone: newPhone,
+                imageUrl: downloadURL // Update with new or existing URL
+            });
+
+            // Update Auth profile as well
+            await updateProfile(auth.currentUser, {
+                displayName: newName,
+                photoURL: downloadURL
+            });
+
+            // --- Update local data ---
+            currentUserData.name = newName;
+            currentUserData.phone = newPhone;
+            currentUserData.imageUrl = downloadURL;
+
+            showToast('Profile updated successfully!', 'success'); // Use showToast
         } catch (error) {
             console.error("Error updating profile: ", error);
-            alert("Failed to update profile. Please try again.");
+            if (profileErrorMsg) profileErrorMsg.textContent = "Failed to update profile. Please try again.";
+            showToast("Failed to update profile.", "error"); // Use showToast
+        } finally {
+            submitButton.disabled = false; // Re-enable button
         }
     });
 
-    // Handle removing the profile picture
-    removePictureBtn.addEventListener('click', async () => {
+    removePictureBtn?.addEventListener('click', async () => {
         if (!currentStylistId) return;
-        if (confirm("Are you sure you want to remove your profile picture?")) {
+        const confirmed = await showConfirmationModal("Are you sure you want to remove your profile picture?");
+        if (confirmed) {
             const userDocRef = doc(db, "users", currentStylistId);
             try {
-                // Set the imageUrl field to empty in Firestore
                 await updateDoc(userDocRef, { imageUrl: "" });
-                
-                // Optionally, delete the image from Storage to save space
                 const storageRef = ref(storage, `profile_pictures/${currentStylistId}`);
                 await deleteObject(storageRef).catch(error => {
-                    // It's okay if it fails (e.g., file didn't exist), so we don't alert the user
                     console.warn("Could not delete old photo from storage, it might not exist.", error);
                 });
-                
-                profileImg.src = 'https://placehold.co/150x150/D67A84/FFFFFF?text=G'; // Reset to placeholder
-                alert('Profile picture removed.');
+                if (profileImg) profileImg.src = 'https://placehold.co/150x150/D67A84/FFFFFF?text=G';
+                currentUserData.imageUrl = ''; // Update local data
+                showToast('Profile picture removed.', 'success'); // Use showToast
             } catch (error) {
                 console.error("Error removing profile picture: ", error);
-                alert("Failed to remove picture. Please try again.");
+                showToast("Failed to remove picture.", "error"); // Use showToast
             }
         }
     });

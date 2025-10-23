@@ -2066,3 +2066,37 @@ input:checked+.slider:before {
     background: var(--muted);
     box-shadow: 0 4px 10px rgba(214, 122, 132, 0.3);
 }
+
+/* --- NEW: Style for Decline Reason in My Bookings --- */
+.decline-reason {
+    font-size: 0.85em;
+    color: var(--primary); /* Use primary color for emphasis */
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--accent); /* Separator */
+}
+.decline-reason strong {
+    color: var(--muted);
+}
+.dark-mode .decline-reason {
+     border-top-color: var(--border-color);
+}
+
+
+/* --- NEW: Style for Mobile Nav Close Button --- */
+.mobile-nav-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 2.5rem; /* Make it larger */
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    line-height: 1;
+}
+
+.dark-mode .mobile-nav-close {
+    color: var(--text-secondary); /* Adjust color for dark mode */
+}

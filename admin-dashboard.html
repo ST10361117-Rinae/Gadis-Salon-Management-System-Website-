@@ -73,7 +73,7 @@
                         <h3>Inventory Status</h3>
                         <div class="inventory-grid">
                             <div class="inventory-list-card">
-                                <h4>Low Stock Items (<= 10)</h4>
+                                 <h4>Low Stock Products (<span id="low-stock-threshold">10</span> units or less)</h4>
                                 <ul id="low-stock-list">
                                     <li>Loading...</li>
                                 </ul>
@@ -148,6 +148,10 @@
 
                 <!-- NEW: Time Off Page -->
                 <section id="timeoff-page" class="dashboard-page fade-in-up" style="display: none;">
+                    <!-- NEW: Add Create Time Off Button -->
+                    <div class="page-actions">
+                         <button id="create-timeoff-btn" class="btn"><i class="fas fa-plus"></i> Create Time Off</button>
+                    </div>
                     <div class="table-container">
                         <table>
                             <thead>
@@ -504,6 +508,45 @@
             </div>
         </div>
     </div>
+
+     <!-- NEW: Admin Time Off Modal -->
+    <div id="timeoff-admin-modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="timeoff-admin-modal-title">Request Time Off</h2>
+                <button id="timeoff-admin-modal-close-btn" class="close-btn">&times;</button>
+            </div>
+            <form id="timeoff-admin-form">
+                <div class="modal-body">
+                    <input type="hidden" id="timeoff-request-id"> <!-- For editing -->
+                    <div class="form-group">
+                        <label for="timeoff-admin-stylist">Stylist</label>
+                        <select id="timeoff-admin-stylist" name="stylist" required>
+                            <option value="">Select a stylist...</option>
+                            <!-- Stylists will be loaded here -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="timeoff-admin-start-date">Start Date</label>
+                        <input type="date" id="timeoff-admin-start-date" name="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="timeoff-admin-end-date">End Date</label>
+                        <input type="date" id="timeoff-admin-end-date" name="endDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="timeoff-admin-reason">Reason</label>
+                        <textarea id="timeoff-admin-reason" name="reason" rows="3" required placeholder="e.g., Vacation, Sick day, Personal"></textarea>
+                    </div>
+                    <p id="timeoff-admin-error-msg" style="color: red; text-align: center; margin-top: 1rem;"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn">Save Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- END NEW Admin Time Off Modal -->
 
      <!-- Toast Notification Container -->
     <div id="toast-container"></div>

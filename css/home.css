@@ -1807,3 +1807,262 @@ input:checked+.slider:before {
     width: auto; /* Allows the button to size based on its text */
     flex-shrink: 0; /* Prevents the button from shrinking on small screens */
 }
+
+/* --- Styles for Quantity Input in Cart --- */
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    width: fit-content;
+    overflow: hidden; /* Ensures buttons stay inside */
+}
+
+.quantity-selector button {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: var(--soft); /* Light background for buttons */
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    transition: background-color 0.2s ease;
+}
+
+.quantity-selector button:hover:not(:disabled) {
+    background: var(--accent); /* Hover effect */
+}
+
+.quantity-selector button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.quantity-selector input[type="number"].quantity-input {
+    width: 40px; /* Adjust width as needed */
+    height: 30px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: var(--background);
+    padding: 0 5px; /* Minimal horizontal padding */
+    -moz-appearance: textfield; /* Firefox */
+}
+
+/* Hide spinner buttons on number input */
+.quantity-selector input[type="number"].quantity-input::-webkit-outer-spin-button,
+.quantity-selector input[type="number"].quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.dark-mode .quantity-selector {
+    border-color: var(--border-color);
+}
+.dark-mode .quantity-selector button {
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+.dark-mode .quantity-selector input[type="number"].quantity-input {
+    background: var(--soft);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+.dark-mode .quantity-selector button:hover:not(:disabled) {
+    background: var(--muted);
+}
+
+/* --- Styles for Auth Redirect Alert --- */
+.auth-alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+    opacity: 0; /* Start hidden */
+    visibility: hidden; /* Hide completely */
+    transition: opacity 0.3s ease, visibility 0s 0.3s; /* Delay visibility transition */
+}
+
+.auth-alert-overlay.visible {
+    opacity: 1; /* Fade in */
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s 0s;
+}
+
+.auth-alert-box {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    text-align: center;
+    max-width: 90%;
+    width: 350px;
+    border-top: 4px solid var(--primary);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.auth-alert-overlay.visible .auth-alert-box {
+    transform: scale(1);
+}
+
+.auth-alert-box p {
+    margin: 0 0 0.5rem;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.auth-alert-box .redirect-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* --- Styles for Toast Notifications --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none; /* Allow clicks through container */
+}
+
+.toast {
+    background-color: var(--dark);
+    color: var(--white);
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transform: translateX(calc(100% + 20px));
+    transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+    opacity: 0;
+    pointer-events: auto; /* Toasts themselves are clickable if needed */
+}
+
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast.toast-success {
+    background: linear-gradient(90deg, #155724, #28a745);
+}
+
+.toast.toast-error {
+    background: linear-gradient(90deg, #721c24, #dc3545);
+}
+
+.toast.toast-warning {
+    background: linear-gradient(90deg, #856404, #ffc107);
+    color: #333; /* Darker text for warning */
+}
+
+/* --- Styles for Generic Confirmation Modal --- */
+#confirmation-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex; /* Use flex instead of display: none */
+    align-items: center;
+    justify-content: center;
+    z-index: 1050; /* Ensure it's above other elements */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s 0.3s;
+    backdrop-filter: blur(5px);
+}
+
+#confirmation-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s 0s;
+}
+
+#confirmation-modal {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    border-top: 4px solid var(--primary); /* Similar style to auth alert */
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+#confirmation-modal-overlay.visible #confirmation-modal {
+    transform: scale(1);
+}
+
+#confirmation-modal h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--muted);
+}
+
+#confirmation-message {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+#confirmation-modal-actions {
+    display: flex;
+    justify-content: center; /* Center buttons */
+    gap: 1rem;
+}
+
+/* General button styles for confirmation */
+#confirmation-modal-actions button {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Specific styles using classes from JS */
+.btn-secondary {
+    background: var(--soft);
+    color: var(--muted);
+    border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background: var(--accent);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+.btn-danger:hover {
+    background: #c82333;
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+}
+
+.btn-primary { /* Add style if you use btn-primary */
+    background: var(--primary);
+    color: white;
+}
+.btn-primary:hover {
+    background: var(--muted);
+    box-shadow: 0 4px 10px rgba(214, 122, 132, 0.3);
+}

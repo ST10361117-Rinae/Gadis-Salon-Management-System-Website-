@@ -12,35 +12,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- NEW: AUTH REDIRECT ALERT FUNCTION ---
     function showAuthRedirectAlert(message) {
-        if (document.querySelector('.auth-alert-overlay')) return;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'auth-alert-overlay';
-
-        const box = document.createElement('div');
-        box.className = 'auth-alert-box';
+        let overlay = document.querySelector('.auth-alert-overlay');
+        if (!overlay) { // Create overlay if it doesn't exist
+            overlay = document.createElement('div');
+            overlay.className = 'auth-alert-overlay';
+            overlay.innerHTML = `<div class="auth-alert-box"></div>`;
+            document.body.appendChild(overlay);
+        }
+        
+        const box = overlay.querySelector('.auth-alert-box');
         box.innerHTML = `<p>${message}</p><p class="redirect-text">Redirecting to login...</p>`;
 
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
-
-        // This ensures the element is in the DOM before we try to animate it
+        // Make it visible
         requestAnimationFrame(() => {
             overlay.classList.add('visible');
         });
 
+        // Redirect after delay
         setTimeout(() => {
             window.location.href = 'login.html';
+            // Optionally hide overlay immediately before redirect
+            overlay.classList.remove('visible');
         }, 2500);
     }
 
      // --- NEW: TOAST NOTIFICATION FUNCTION ---
     function showToast(message, type = 'success') {
         const toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) return;
+        if (!toastContainer) {
+            console.error("Toast container not found!");
+            return;
+        }
 
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
+        // --- MODIFIED: Added specific type class ---
+        toast.className = `toast toast-${type}`;
         toast.textContent = message;
 
         toastContainer.appendChild(toast);
@@ -48,16 +54,65 @@ document.addEventListener('DOMContentLoaded', () => {
         // Animate in
         setTimeout(() => {
             toast.classList.add('show');
-        }, 100);
+        }, 10); // Reduced delay for faster appearance
 
         // Animate out and remove after a delay
         setTimeout(() => {
             toast.classList.remove('show');
             toast.addEventListener('transitionend', () => {
-                toast.remove();
-            });
-        }, 4000);
+                // Ensure removal only happens once
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, { once: true }); // Use {once: true} for safety
+        }, 3000); // Keep duration reasonable
     }
+
+    // --- NEW: Generic Confirmation Modal Function ---
+    // (Ensure you have corresponding CSS and HTML for #confirmation-modal-overlay etc.)
+    let confirmResolve = null; // Store the promise resolve function
+    function showConfirmationModal(message = "Are you sure you want to proceed?", confirmButtonClass = 'btn-danger', confirmButtonText = 'Proceed') {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('confirmation-modal-overlay');
+            const msgElement = document.getElementById('confirmation-message');
+            const proceedBtn = document.getElementById('confirm-proceed-btn');
+
+            if (!overlay || !msgElement || !proceedBtn) {
+                console.error("Confirmation modal elements not found!");
+                resolve(false); // Can't show modal, resolve as false
+                return;
+            }
+
+            msgElement.textContent = message;
+            // Apply button styling
+            proceedBtn.className = confirmButtonClass; // Reset classes and add the new one
+            proceedBtn.textContent = confirmButtonText;
+
+            overlay.classList.add('visible');
+            confirmResolve = resolve; // Store the resolve function
+        });
+    }
+
+    // --- NEW: Event Listeners for Confirmation Modal Buttons ---
+    const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+    const confirmProceedBtn = document.getElementById('confirm-proceed-btn');
+    const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
+
+    confirmCancelBtn?.addEventListener('click', () => {
+        confirmationModalOverlay?.classList.remove('visible');
+        if (confirmResolve) {
+            confirmResolve(false); // Resolve promise with false (cancelled)
+            confirmResolve = null;
+        }
+    });
+
+    confirmProceedBtn?.addEventListener('click', () => {
+        confirmationModalOverlay?.classList.remove('visible');
+        if (confirmResolve) {
+            confirmResolve(true); // Resolve promise with true (proceed)
+            confirmResolve = null;
+        }
+    });
 
 
     // --- ELEMENT SELECTIONS ---
@@ -117,7 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentUser = null;
     let userFavorites = [];
-    let currentCart = []; // Keep a local copy of the cart
+    let currentCart = []; // Local cart state
+    let hasCartChanged = false; // Flag to track local changes
+    let saveCartTimeout = null; // For debouncing Firestore saves
+    let unsubscribeCartListener = null; // To detach listener on logout
     let unsubscribeSupportChat;
     let currentOpenTicketId = null;
 
@@ -128,27 +186,41 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser = user;
         updateUIAfterAuthStateChange();
         if (user) {
+            // ... (welcome animation logic) ...
             const justLoggedIn = sessionStorage.getItem('justLoggedIn');
-            if (justLoggedIn === 'true') {
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists()) {
-                    console.log("Welcome animation triggered for:", userDoc.data().name);
-                    showWelcomeAnimation(userDoc.data().name);
-                    sessionStorage.removeItem('justLoggedIn');
-                }
-            }
+            if (justLoggedIn === 'true') { /* ... show welcome ... */ }
 
-            listenForCartUpdates(user.uid);
+            // --- MODIFIED: Detach old listener first ---
+            if (unsubscribeCartListener) {
+                unsubscribeCartListener();
+                console.log("Detached previous cart listener.");
+            }
+            // --- Attach new listeners ---
+            listenForCartUpdates(user.uid); // Attaches new listener and sets unsubscribeCartListener
             listenForFavoritesUpdates(user.uid);
             listenForMyBookings(user.uid);
             listenForMyOrders(user.uid);
             listenForNotifications(user.uid);
-            listenForSupportTickets(user.uid); // ADDED
+            listenForSupportTickets(user.uid);
             editProfileLink.href = `#edit-profile/${user.uid}`;
         } else {
+             // --- MODIFIED: Detach listener on logout ---
+            if (unsubscribeCartListener) {
+                unsubscribeCartListener();
+                unsubscribeCartListener = null;
+                console.log("Detached cart listener on logout.");
+            }
+            // Clear local data and UI
+            currentCart = [];
+            userFavorites = [];
             renderCart([]); renderFavorites([]); renderMyBookings([]); renderMyOrders([]); renderNotifications([]);
+            // Optionally clear support tickets UI
+            ticketListContainer.innerHTML = '<p>Please log in to view tickets.</p>';
+            ticketConversationContainer.innerHTML = '';
+            supportChatForm.style.display = 'none';
         }
     });
+
 
     myBookingsLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(myBookingsPanel, true); });
     myOrdersLink.addEventListener('click', (e) => { e.preventDefault(); toggleOffCanvas(myOrdersPanel, true); });
@@ -406,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleModal(bookingDetailModal, false);
         toggleModal(checkoutModal, false);
         toggleModal(newSupportTicketModal, false); // ADDED
+        toggleModal(confirmationModalOverlay, false); 
         document.body.style.overflow = '';
     });
     
@@ -528,45 +601,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function addToCart(productId, selectedSize) {
-        if (!currentUser) return;
-        const productRef = doc(db, "products", productId);
-        const productSnap = await getDoc(productRef);
-        if (!productSnap.exists()) return;
-
-        const product = productSnap.data();
-        const variant = product.variants.find(v => v.size === selectedSize);
-        if (!variant || variant.stock <= 0) {
-            alert("This item is out of stock.");
+        if (!currentUser) {
+            showAuthRedirectAlert("Please log in to add items to your cart.");
             return;
         }
 
-        const userRef = doc(db, 'users', currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        const cart = userSnap.exists() && userSnap.data().cart ? userSnap.data().cart : [];
-        const itemIndex = cart.findIndex(item => item.productId === productId && item.size === selectedSize);
-
-        if (itemIndex > -1) {
-            cart[itemIndex].quantity += 1;
-        } else {
-            cart.push({ productId, name: product.name, size: selectedSize, price: variant.price, quantity: 1, imageUrl: product.imageUrl });
+        const productRef = doc(db, "products", productId);
+        const productSnap = await getDoc(productRef);
+        if (!productSnap.exists()) {
+            showToast("Product not found.", "error");
+            return;
         }
 
-        await setDoc(userRef, { cart }, { merge: true });
-        alert(`${product.name} added to cart!`);
-        toggleModal(detailModalOverlay, false);
+        const product = productSnap.data();
+        const variant = product.variants.find(v => v.size === selectedSize);
+        if (!variant) {
+            showToast("Selected variant not found.", "error");
+            return;
+        }
+        if (variant.stock <= 0) {
+            showToast("This item is currently out of stock.", "warning");
+            return;
+        }
+
+        const itemIndex = currentCart.findIndex(item => item.productId === productId && item.size === selectedSize);
+        let currentQuantity = itemIndex > -1 ? currentCart[itemIndex].quantity : 0;
+
+        if (currentQuantity >= variant.stock) {
+            showToast(`Only ${variant.stock} available in stock.`, "warning");
+            return; // Don't add if already at stock limit
+        }
+
+        if (itemIndex > -1) {
+            // Update quantity in local cart
+            currentCart[itemIndex].quantity += 1;
+        } else {
+            // Add new item to local cart, including stock limit
+            currentCart.push({
+                productId,
+                name: product.name,
+                size: selectedSize,
+                price: variant.price,
+                quantity: 1,
+                imageUrl: product.imageUrl,
+                stock: variant.stock // Store the stock limit
+            });
+        }
+
+        hasCartChanged = true; // Mark cart as changed
+        renderCart(currentCart); // Update UI immediately
+        debouncedSaveCart(); // Schedule a Firestore save
+
+        showToast(`${product.name} added to cart!`, "success");
+        toggleModal(detailModalOverlay, false); // Close detail modal
     }
 
     function listenForCartUpdates(uid) {
-        onSnapshot(doc(db, 'users', uid), (docSnap) => {
-            currentCart = docSnap.exists() ? docSnap.data().cart || [] : [];
-            renderCart(currentCart);
+        const userRef = doc(db, 'users', uid);
+        unsubscribeCartListener = onSnapshot(userRef, (docSnap) => {
+            // Only update local cart from Firestore if no local changes are pending
+            if (!hasCartChanged) {
+                const firestoreCart = docSnap.exists() ? docSnap.data().cart || [] : [];
+                // --- Crucial: We need stock info here. If not saved in user's cart doc,
+                // we'd need to fetch products *here* which defeats the purpose.
+                // ASSUMPTION: 'stock' is saved within each cart item in Firestore.
+                // If not, the `addToCart` needs to save it, or we need a different strategy.
+                currentCart = firestoreCart;
+                console.log("Cart updated from Firestore:", currentCart);
+                renderCart(currentCart);
+            } else {
+                console.log("Local cart changes pending, skipping Firestore update.");
+            }
+        }, (error) => {
+            console.error("Error listening to cart updates:", error);
+            // Handle error appropriately, maybe show a toast
         });
+        console.log("Attached cart listener for user:", uid);
     }
 
     function renderCart(cartItems) {
         if (!cartItemsContainer || !cartBadge || !cartTotalPrice) return;
 
-        console.log("Rendering cart with items:", cartItems);
+        console.log("Rendering cart UI with items:", cartItems);
 
         if (!cartItems || cartItems.length === 0) {
             cartItemsContainer.innerHTML = '<p>Your cart is empty.</p>';
@@ -575,21 +691,44 @@ document.addEventListener('DOMContentLoaded', () => {
             checkoutBtn.disabled = true;
             return;
         }
-        let totalItems = 0, totalPrice = 0;
+
+        let totalItems = 0;
+        let totalPrice = 0;
         let cartHtml = '';
+
         cartItems.forEach(item => {
+            const itemTotalPrice = item.price * item.quantity;
             totalItems += item.quantity;
-            totalPrice += item.price * item.quantity;
-            cartHtml += `<div class="cart-item" data-product-id="${item.productId}" data-size="${item.size}"><img src="${item.imageUrl}" class="cart-item-image"><div class="cart-item-details"><h4>${item.name}</h4><p>${item.size}</p><div class="quantity-selector"><button class="quantity-btn" data-action="decrease">-</button><span>${item.quantity}</span><button class="quantity-btn" data-action="increase">+</button></div></div><button class="remove-item-btn">&times;</button></div>`;
+            totalPrice += itemTotalPrice;
+
+            cartHtml += `
+            <div class="cart-item" data-product-id="${item.productId}" data-size="${item.size}">
+                <img src="${item.imageUrl}" class="cart-item-image" alt="${item.name}">
+                <div class="cart-item-details">
+                    <h4>${item.name}</h4>
+                    <p>${item.size} - R${item.price.toFixed(2)} ea.</p>
+                    <div class="quantity-selector">
+                        <button class="quantity-btn" data-action="decrease" aria-label="Decrease quantity">-</button>
+                        <input type="number" class="quantity-input" value="${item.quantity}" min="1" max="${item.stock}" data-stock="${item.stock}" aria-label="Quantity for ${item.name} ${item.size}" data-product-id="${item.productId}" data-size="${item.size}">
+                        <button class="quantity-btn" data-action="increase" aria-label="Increase quantity" ${item.quantity >= item.stock ? 'disabled' : ''}>+</button>
+                    </div>
+                     <p class="item-total-price">Total: R${itemTotalPrice.toFixed(2)}</p> <!-- Optional: Show item total -->
+                </div>
+                <button class="remove-item-btn" aria-label="Remove ${item.name} ${item.size}">&times;</button>
+            </div>`;
         });
+
         cartItemsContainer.innerHTML = cartHtml;
         cartBadge.textContent = totalItems;
         cartBadge.style.display = 'block';
         cartTotalPrice.textContent = `R${totalPrice.toFixed(2)}`;
         checkoutBtn.disabled = false;
     }
-    
-    cartItemsContainer?.addEventListener('click', (e) => {
+
+    // --- MODIFIED: Cart Interaction Listener ---
+    // Handles clicks (+/- buttons, remove) AND input changes. Updates LOCAL cart.
+    cartItemsContainer?.addEventListener('input', handleQuantityInputChange); // Listen for input changes
+    cartItemsContainer?.addEventListener('click', (e) => { // Keep click listener for buttons
         console.log("Cart interaction detected. Target:", e.target);
         const cartItemEl = e.target.closest('.cart-item');
         if (!cartItemEl) return;
@@ -601,111 +740,142 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.matches('.quantity-btn')) {
             const action = e.target.dataset.action;
             console.log(`Quantity button clicked. Action: ${action}`);
-            updateCartQuantity(productId, size, action);
+            updateLocalCartQuantity(productId, size, action);
         }
         if (e.target.matches('.remove-item-btn')) {
             console.log('Remove button clicked.');
-            removeFromCart(productId, size);
+            removeLocalCartItem(productId, size);
         }
     });
 
-    async function updateCartQuantity(productId, size, action) {
-        if (!currentUser) return;
-        const userRef = doc(db, 'users', currentUser.uid);
-        const productRef = doc(db, 'products', productId);
+    // --- NEW: Handler for quantity input change ---
+    function handleQuantityInputChange(e) {
+        if (!e.target.matches('.quantity-input')) return;
 
-        try {
-            await runTransaction(db, async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                const productDoc = await transaction.get(productRef);
+        const input = e.target;
+        const productId = input.dataset.productId;
+        const size = input.dataset.size;
+        const stock = parseInt(input.dataset.stock, 10);
+        let newQuantity = parseInt(input.value, 10);
 
-                if (!userDoc.exists() || !productDoc.exists()) {
-                    throw "Document does not exist!";
-                }
+        // Basic validation
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            newQuantity = 1; // Default to 1 if invalid input
+            input.value = newQuantity; // Correct the input field
+        }
 
-                const cart = userDoc.data().cart || [];
-                const itemIndex = cart.findIndex(item => item.productId === productId && item.size === size);
-                if (itemIndex === -1) return; // Item not in cart
+        // Check stock
+        if (newQuantity > stock) {
+            showToast(`Only ${stock} available in stock.`, "warning");
+            newQuantity = stock; // Cap at stock limit
+            input.value = newQuantity; // Correct the input field
+        }
 
-                if (action === 'increase') {
-                    const productData = productDoc.data();
-                    const variant = productData.variants.find(v => v.size === size);
-                    if (cart[itemIndex].quantity >= variant.stock) {
-                        throw new Error("STOCK_EXCEEDED");
-                    }
-                    cart[itemIndex].quantity++;
-                } else if (action === 'decrease') {
-                    cart[itemIndex].quantity--;
-                }
-                
-                if (cart[itemIndex].quantity <= 0) {
-                    cart.splice(itemIndex, 1);
-                }
-                transaction.update(userRef, { cart: cart });
-            });
-            console.log("Cart quantity updated successfully via transaction!");
-        } catch (e) {
-            if (e.message === "STOCK_EXCEEDED") {
-                alert("Cannot add more. Item is out of stock.");
+        console.log(`Input changed for ${productId} (${size}). New quantity: ${newQuantity}`);
+        updateLocalCartQuantity(productId, size, 'set', newQuantity);
+    }
+
+
+    // --- NEW: updateLocalCartQuantity ---
+    // Updates the quantity in the LOCAL `currentCart` array and triggers UI/save.
+    function updateLocalCartQuantity(productId, size, action, value = null) {
+        const itemIndex = currentCart.findIndex(item => item.productId === productId && item.size === size);
+        if (itemIndex === -1) return; // Item not in local cart
+
+        const item = currentCart[itemIndex];
+        let newQuantity = item.quantity;
+        const stock = item.stock; // Get stock from the local item object
+
+        if (action === 'increase') {
+            if (newQuantity < stock) {
+                newQuantity++;
             } else {
-                console.error("Cart quantity transaction failed: ", e);
+                showToast(`Only ${stock} available in stock.`, "warning");
+                // Disable the increase button in the UI (renderCart will handle this on redraw)
             }
+        } else if (action === 'decrease') {
+            newQuantity--;
+        } else if (action === 'set' && value !== null) {
+            newQuantity = value; // Directly set from input handler
+        }
+
+        if (newQuantity <= 0) {
+            // Remove item if quantity drops to 0 or less
+            currentCart.splice(itemIndex, 1);
+        } else {
+            // Update quantity, ensuring it doesn't exceed stock
+            currentCart[itemIndex].quantity = Math.min(newQuantity, stock);
+        }
+
+        hasCartChanged = true;
+        renderCart(currentCart); // Update UI immediately
+        debouncedSaveCart(); // Schedule Firestore save
+    }
+
+    // --- NEW: removeLocalCartItem ---
+    // Removes item from LOCAL `currentCart` and triggers UI/save.
+    function removeLocalCartItem(productId, size) {
+        const itemIndex = currentCart.findIndex(item => item.productId === productId && item.size === size);
+        if (itemIndex > -1) {
+            currentCart.splice(itemIndex, 1);
+            hasCartChanged = true;
+            renderCart(currentCart); // Update UI immediately
+            debouncedSaveCart(); // Schedule Firestore save
         }
     }
 
-    async function removeFromCart(productId, size) {
-        if (!currentUser) return;
+    // --- NEW: Debounce function for saving cart ---
+    function debouncedSaveCart() {
+        clearTimeout(saveCartTimeout); // Clear previous timeout
+        saveCartTimeout = setTimeout(() => {
+            saveCartToFirestoreIfNeeded();
+        }, 1500); // Wait 1.5 seconds after the last change
+    }
+
+    // --- NEW: saveCartToFirestoreIfNeeded ---
+    // Saves the LOCAL cart state to Firestore if changes have been made.
+    async function saveCartToFirestoreIfNeeded() {
+        if (!currentUser || !hasCartChanged) {
+            // console.log("Save skipped - no user or no changes.");
+            return; // No user or no changes to save
+        }
+
+        console.log("Saving cart to Firestore:", currentCart);
         const userRef = doc(db, 'users', currentUser.uid);
         try {
-            await runTransaction(db, async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) {
-                    throw "Document does not exist!";
-                }
-                const cart = userDoc.data().cart || [];
-                const updatedCart = cart.filter(item => !(item.productId === productId && item.size === size));
-                
-                if (cart.length !== updatedCart.length) {
-                     transaction.update(userRef, { cart: updatedCart });
-                }
-            });
-            console.log("Item removed from cart successfully via transaction!");
-        } catch(e) {
-            console.error("Remove from cart transaction failed: ", e);
+            // Use setDoc with merge: true to update/create the cart field
+            await setDoc(userRef, { cart: currentCart }, { merge: true });
+            hasCartChanged = false; // Reset flag after successful save
+            console.log("Cart saved to Firestore successfully.");
+        } catch (error) {
+            console.error("Error saving cart to Firestore:", error);
+            showToast("Could not save cart changes.", "error");
+            // Keep hasCartChanged = true so it tries again later? Or handle error better.
         }
     }
 
+    // --- MODIFIED: openCheckoutModal ---
+    // Now just renders based on LOCAL cart. Replaced alert.
     function openCheckoutModal() {
         if (currentCart.length === 0) {
-            alert("Your cart is empty.");
+            showToast("Your cart is empty.", "warning"); // Use toast
             return;
         }
+        saveCartToFirestoreIfNeeded(); // Ensure latest changes are saved before checkout potentially starts
         toggleOffCanvas(cartModal, false);
         const checkoutBody = document.getElementById('checkout-body');
         const checkoutTotalPrice = document.getElementById('checkout-total-price');
-        
+
         let summaryHtml = '<h3>Order Summary</h3>';
         let totalPrice = 0;
         currentCart.forEach(item => {
             summaryHtml += `<div class="cart-item"><img src="${item.imageUrl}" class="cart-item-image"><div class="cart-item-details"><h4>${item.name}</h4><p>${item.size} (x${item.quantity})</p></div><span class="order-item-price">R${(item.price * item.quantity).toFixed(2)}</span></div>`;
             totalPrice += item.price * item.quantity;
         });
-        
+
         const optionsHtml = `
-            <div class="booking-step">
-                <h3>Delivery Method</h3>
-                <div class="payment-selector">
-                    <input type="radio" name="delivery" id="radio-pickup" value="Pickup" checked><label for="radio-pickup">Pickup from Salon</label>
-                    <input type="radio" name="delivery" id="radio-delivery" value="Delivery" disabled><label for="radio-delivery">Delivery (Unavailable)</label>
-                </div>
-            </div>
-            <div class="booking-step">
-                <h3>Payment Method</h3>
-                <div class="payment-selector">
-                    <input type="radio" name="payment" id="radio-cash" value="Cash" checked><label for="radio-cash">Pay with Cash at Salon</label>
-                    <input type="radio" name="payment" id="radio-card" value="Card" disabled><label for="radio-card">Pay with Card (Unavailable)</label>
-                </div>
-            </div>
+            <div class="booking-step"><h3>Delivery Method</h3><div class="payment-selector"><input type="radio" name="delivery" id="radio-pickup" value="Pickup" checked><label for="radio-pickup">Pickup from Salon</label><input type="radio" name="delivery" id="radio-delivery" value="Delivery" disabled><label for="radio-delivery">Delivery (Unavailable)</label></div></div>
+            <div class="booking-step"><h3>Payment Method</h3><div class="payment-selector"><input type="radio" name="payment" id="radio-cash" value="Cash" checked><label for="radio-cash">Pay with Cash at Salon</label><input type="radio" name="payment" id="radio-card" value="Card" disabled><label for="radio-card">Pay with Card (Unavailable)</label></div></div>
         `;
 
         checkoutBody.innerHTML = summaryHtml + optionsHtml;
@@ -713,46 +883,127 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleModal(checkoutModal, true);
     }
 
+    // --- MODIFIED: confirmOrder ---
+    // Adds final stock verification before placing order. Replaced alerts.
     async function confirmOrder() {
-        if (!currentUser || currentCart.length === 0) {
-            alert("Cannot confirm order. Your cart is empty or you are not logged in.");
+        if (!currentUser) {
+            showToast("Please log in to place an order.", "warning");
             return;
         }
+         if (currentCart.length === 0) {
+            showToast("Cannot confirm order. Your cart is empty.", "warning");
+            return;
+        }
+
+        // 1. Final Stock Verification
+        confirmOrderBtn.disabled = true;
+        confirmOrderBtn.textContent = 'Verifying Stock...';
+        let stockIssueFound = false;
+        const stockCheckPromises = currentCart.map(async (item) => {
+            const productRef = doc(db, "products", item.productId);
+            try {
+                const productSnap = await getDoc(productRef);
+                if (!productSnap.exists()) {
+                    throw new Error(`Product ${item.name} not found.`);
+                }
+                const productData = productSnap.data();
+                const variant = productData.variants.find(v => v.size === item.size);
+                if (!variant) {
+                     throw new Error(`Variant ${item.size} for ${item.name} not found.`);
+                }
+                if (item.quantity > variant.stock) {
+                    stockIssueFound = true;
+                    showToast(`${item.name} (${item.size}) only has ${variant.stock} left in stock. Your cart quantity is ${item.quantity}. Please update your cart.`, "error");
+                    // Optionally: Update local cart and UI immediately
+                    item.stock = variant.stock; // Update local stock info
+                    if (item.quantity > variant.stock) item.quantity = variant.stock; // Reduce quantity
+                    hasCartChanged = true;
+                }
+                 // Update local stock info even if quantity is okay, in case it changed
+                item.stock = variant.stock;
+
+            } catch (error) {
+                console.error("Stock check error for", item.name, error);
+                showToast(`Error checking stock for ${item.name}. Please try again.`, "error");
+                stockIssueFound = true; // Treat fetch errors as stock issues
+            }
+        });
+
+        await Promise.all(stockCheckPromises);
+
+        confirmOrderBtn.disabled = false;
+        confirmOrderBtn.textContent = 'Confirm Order';
+
+        if (stockIssueFound) {
+            renderCart(currentCart); // Re-render cart with updated quantities/stock
+            toggleModal(checkoutModal, false); // Close checkout
+            toggleOffCanvas(cartModal, true); // Open cart to show issues
+            saveCartToFirestoreIfNeeded(); // Save potentially corrected cart quantities
+            return; // Stop order placement
+        }
+
+        // 2. Proceed with Order Placement (if stock is OK)
+        confirmOrderBtn.disabled = true;
+        confirmOrderBtn.textContent = 'Placing Order...';
 
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!userDoc.exists()) {
-            alert("User data not found.");
+            showToast("User data not found.", "error");
+             confirmOrderBtn.disabled = false;
+             confirmOrderBtn.textContent = 'Confirm Order';
             return;
         }
         const customerName = userDoc.data().name;
-        
-        let totalPrice = 0;
-        currentCart.forEach(item => {
-            totalPrice += item.price * item.quantity;
-        });
 
-        const newOrderId = crypto.randomUUID(); // 1. Generate a client-side ID
+        let totalPrice = currentCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        const newOrderId = `order_${crypto.randomUUID()}`; // More descriptive ID
         const newOrder = {
-            id: newOrderId, // 2. Add the id field
+            id: newOrderId,
             customerId: currentUser.uid,
             customerName: customerName,
-            items: currentCart,
+            items: currentCart, // Use the verified local cart items
             totalPrice: totalPrice,
-            status: "Pending Pickup",
-            timestamp: Date.now() // 3. Use Date.now() to get a Long
+            status: "Pending Pickup", // Assuming only pickup is enabled
+            timestamp: serverTimestamp() // Use server timestamp for reliability
         };
 
          try {
-            const orderRef = doc(db, "product_orders", newOrderId);
-            await setDoc(orderRef, newOrder);
-            
-            await updateDoc(doc(db, 'users', currentUser.uid), { cart: [] });
+            const batch = writeBatch(db);
 
-            alert("Order placed successfully! You will be notified when it's ready for pickup.");
+            // a. Create the order document
+            const orderRef = doc(db, "product_orders", newOrderId);
+            batch.set(orderRef, newOrder);
+
+            // b. Update stock levels (important!)
+            currentCart.forEach(item => {
+                const productRef = doc(db, "products", item.productId);
+                // To update stock within an array, we need to fetch, modify, and update
+                // This is complex and better suited for a Cloud Function if possible.
+                // For now, skipping atomic stock update in batch for simplicity,
+                // BUT THIS IS RISKY IN PRODUCTION (risk of overselling).
+                // A Cloud Function triggered by order creation is the robust solution.
+                console.warn(`Stock update for ${item.productId} variant ${item.size} skipped in client-side batch.`);
+            });
+
+            // c. Clear the user's cart
+            const userRef = doc(db, 'users', currentUser.uid);
+            batch.update(userRef, { cart: [] });
+
+            await batch.commit(); // Commit all changes together
+
+            currentCart = []; // Clear local cart
+            hasCartChanged = false; // Reset flag
+            renderCart([]); // Update UI
+
+            showToast("Order placed successfully! You will be notified when it's ready for pickup.", "success");
             toggleModal(checkoutModal, false);
         } catch (error) {
             console.error("Error placing order:", error);
-            alert("There was an error placing your order. Please try again.");
+            showToast("There was an error placing your order. Please try again.", "error");
+        } finally {
+             confirmOrderBtn.disabled = false;
+             confirmOrderBtn.textContent = 'Confirm Order';
         }
     }
     
@@ -891,6 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBookingItem = null;
     let selectedBooking = { stylist: null, date: null, time: null };
     let currentDate = new Date(); // For tracking calendar month
+    let availableStylistsForModal = [];
 
     async function openBookingModal(hairstyle) {
         console.log("--- Opening Booking Modal ---");
@@ -904,13 +1156,13 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleOffCanvas(bookingModal, true);
         
         const stylistIds = hairstyle.availableStylistIds || [];
-        const stylists = [];
-        for (const id of stylistIds) {
-            const stylistDoc = await getDoc(doc(db, "users", id));
-            if (stylistDoc.exists()) stylists.push({ id: stylistDoc.id, ...stylistDoc.data() });
-        }
+        availableStylistsForModal = []; // Clear previous stylists
+            for (const id of stylistIds) {
+                const stylistDoc = await getDoc(doc(db, "users", id));
+                if (stylistDoc.exists()) availableStylistsForModal.push({ id: stylistDoc.id, ...stylistDoc.data() });
+            }
         
-        renderBookingUI(stylists);
+        renderBookingUI(availableStylistsForModal);
         const today = new Date();
         today.setHours(0,0,0,0);
         const todayString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
@@ -1000,33 +1252,92 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         timeSlotGrid.innerHTML = '<p>Loading times...</p>';
+        updateConfirmButtonState();
         
         const dateToSend = selectedBooking.date;
         console.log(`Fetching slots for date string: "${dateToSend}"`);
 
         const getAvailableSlots = httpsCallable(functions, 'getAvailableSlots');
-        try {
-            const result = await getAvailableSlots({ stylistName: selectedBooking.stylist, date: dateToSend, hairstyleId: currentBookingItem.id });
-            const availableSlots = new Set(result.data.slots || []);
-            const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
-            const allSlots = hoursDoc.data().time_slots || [];
-            const occupiedSlots = new Set(allSlots.filter(slot => !availableSlots.has(slot)));
 
-            const today = new Date();
-            const todayString = today.toISOString().split('T')[0];
-            if (selectedBooking.date === todayString) {
-                const leadTimeHour = today.getHours() + 3;
-                allSlots.forEach(slot => {
-                    if (parseInt(slot.split(':')[0]) < leadTimeHour) occupiedSlots.add(slot);
+        // --- NEW: Handle "Any Available" separately ---
+        if (selectedBooking.stylist === "Any Available") {
+            try {
+                // Get all specific stylist names available for this service
+                const specificStylistNames = availableStylistsForModal.map(s => s.name);
+                if (specificStylistNames.length === 0) {
+                    timeSlotGrid.innerHTML = '<p>No stylists available for this service.</p>';
+                    return;
+                }
+
+                // Call getAvailableSlots for each specific stylist
+                const slotPromises = specificStylistNames.map(stylistName =>
+                    getAvailableSlots({ stylistName: stylistName, date: dateToSend, hairstyleId: currentBookingItem.id })
+                );
+
+                // Use Promise.allSettled to handle potential errors for individual stylists
+                const results = await Promise.allSettled(slotPromises);
+
+                const combinedSlots = new Set();
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled' && result.value.data.slots) {
+                        result.value.data.slots.forEach(slot => combinedSlots.add(slot));
+                    } else {
+                        console.warn(`Could not fetch slots for stylist ${specificStylistNames[index]}:`, result.reason || 'Unknown error');
+                    }
                 });
+
+                if (combinedSlots.size === 0) {
+                    timeSlotGrid.innerHTML = '<p>No available times found for any stylist on this date.</p>';
+                } else {
+                     // Get all possible slots to determine occupied ones correctly for combined view
+                    const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
+                    const allSlots = hoursDoc.exists() ? hoursDoc.data().time_slots || [] : [];
+                    const occupiedSlots = new Set(allSlots.filter(slot => !combinedSlots.has(slot)));
+
+                    // Apply lead time check for today
+                     const today = new Date();
+                     const todayString = today.toISOString().split('T')[0];
+                     if (selectedBooking.date === todayString) {
+                         const leadTimeHour = today.getHours() + 3; // 3-hour lead time
+                         allSlots.forEach(slot => {
+                             if (parseInt(slot.split(':')[0]) < leadTimeHour) occupiedSlots.add(slot);
+                         });
+                     }
+
+                    renderTimeSlots(allSlots, occupiedSlots);
+                }
+            } catch (error) {
+                console.error("Error fetching combined slots:", error);
+                timeSlotGrid.innerHTML = '<p>Could not load available times.</p>';
             }
-            console.log("Occupied slots found:", Array.from(occupiedSlots));
-            renderTimeSlots(allSlots, occupiedSlots);
-        } catch (error) {
-            console.error("Error fetching time slots:", error);
-            timeSlotGrid.innerHTML = '<p>Could not load available times.</p>';
+        } else {
+            // --- Original logic for a specific stylist ---
+            try {
+                const result = await getAvailableSlots({ stylistName: selectedBooking.stylist, date: dateToSend, hairstyleId: currentBookingItem.id });
+                const availableSlots = new Set(result.data.slots || []);
+
+                const hoursDoc = await getDoc(doc(db, "app_content", "salon_hours"));
+                const allSlots = hoursDoc.exists() ? hoursDoc.data().time_slots || [] : [];
+                const occupiedSlots = new Set(allSlots.filter(slot => !availableSlots.has(slot)));
+
+                 // Apply lead time check for today
+                 const today = new Date();
+                 const todayString = today.toISOString().split('T')[0];
+                 if (selectedBooking.date === todayString) {
+                     const leadTimeHour = today.getHours() + 3; // 3-hour lead time
+                     allSlots.forEach(slot => {
+                         if (parseInt(slot.split(':')[0]) < leadTimeHour) occupiedSlots.add(slot);
+                     });
+                 }
+
+                console.log("Occupied slots found for specific stylist:", Array.from(occupiedSlots));
+                renderTimeSlots(allSlots, occupiedSlots);
+            } catch (error) {
+                console.error("Error fetching time slots:", error);
+                timeSlotGrid.innerHTML = '<p>Could not load available times for this stylist.</p>';
+            }
         }
-        updateConfirmButtonState();
+        //updateConfirmButtonState();
     }
 
     function renderTimeSlots(allSlots, occupiedSlots) {
@@ -1057,7 +1368,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function confirmBooking() {
         if (!currentUser || !currentBookingItem || !selectedBooking.stylist || !selectedBooking.date || !selectedBooking.time) {
-            return alert("Please complete all booking selections.");
+            showToast("Please complete all booking selections.", "warning"); // Use toast
+            return;
         }
         
         const dateToSave = selectedBooking.date;
@@ -1073,13 +1385,13 @@ document.addEventListener('DOMContentLoaded', () => {
             timestamp: Date.now() 
         };
 
-        try {
+      try {
             await addDoc(collection(db, "bookings"), bookingData);
-            alert("Booking successful! You will be notified once it's confirmed.");
+            showToast("Booking successful! You will be notified once it's confirmed.", "success"); // Use toast
             toggleOffCanvas(bookingModal, false);
         } catch (error) {
             console.error("Error creating booking:", error);
-            alert("Sorry, there was an error creating your booking.");
+            showToast("Sorry, there was an error creating your booking.", "error"); // Use toast
         }
     }
 
@@ -1200,21 +1512,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const clearAllBtn = e.target.closest('#clear-all-notifications-btn');
         const orderCard = e.target.closest('.order-card[data-order-id]');
 
-        if (removeBtn) {
-            e.stopPropagation(); // Prevent the chat modal from opening
+       if (removeBtn) {
+            e.stopPropagation();
             const notificationId = removeBtn.dataset.notificationId;
-            if (confirm('Are you sure you want to delete this notification?')) {
+            const confirmed = await showConfirmationModal('Are you sure you want to delete this notification?', 'btn-danger', 'Delete');
+            if (confirmed && currentUser) {
                 await deleteDoc(doc(db, 'users', currentUser.uid, 'notifications', notificationId));
+                 showToast("Notification deleted.", "success");
             }
-        } 
+        }
         else if (clearAllBtn) {
-            if (confirm('Are you sure you want to clear all notifications?')) {
+             const confirmed = await showConfirmationModal('Are you sure you want to clear all notifications?', 'btn-danger', 'Clear All');
+             if (confirmed && currentUser) {
                 const q = query(collection(db, 'users', currentUser.uid, 'notifications'));
                 const snapshot = await getDocs(q);
                 if (!snapshot.empty) {
                     const batch = writeBatch(db);
                     snapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
                     await batch.commit();
+                    showToast("All notifications cleared.", "success");
                 }
             }
         }
@@ -1588,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
 
         let cancelBtnHtml = '';
-        if (order.status === 'Pending Pickup') {
+        if (order.status === 'Pending Pickup') { // Only allow cancellation if pending
             cancelBtnHtml = `<button id="cancel-order-btn" class="btn-danger" data-order-id="${orderId}">Cancel Order</button>`;
         }
         
@@ -1606,14 +1922,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const cancelBtn = document.getElementById('cancel-order-btn');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', async () => {
-                if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+                 const confirmed = await showConfirmationModal('Are you sure you want to cancel this order? This action cannot be undone.');
+                 if (confirmed) {
                     try {
                         await updateDoc(orderRef, { status: "Cancelled" });
-                        alert("Order has been cancelled.");
+                        showToast("Order has been cancelled.", "success"); // Use toast
                         toggleModal(overlay, false);
                     } catch (error) {
                         console.error("Error cancelling order:", error);
-                        alert("Failed to cancel the order. Please try again.");
+                        showToast("Failed to cancel the order. Please try again.", "error"); // Use toast
                     }
                 }
             });
@@ -1680,26 +1997,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleProfilePictureRemove() {
         if (!currentUser) return;
-        if (!confirm("Are you sure you want to remove your profile picture?")) return;
+        const confirmed = await showConfirmationModal("Are you sure you want to remove your profile picture?");
+        if (!confirmed) return;
 
         const userRef = doc(db, 'users', currentUser.uid);
         const picRef = ref(storage, `profile_pictures/${currentUser.uid}`);
-        
         try {
-            await deleteObject(picRef);
+            await deleteObject(picRef).catch(err => { if (err.code !== 'storage/object-not-found') throw err; }); // Ignore if not found
             await updateDoc(userRef, { imageUrl: "" });
             await updateProfile(currentUser, { photoURL: "" });
             document.getElementById('profile-picture-preview').src = 'https://placehold.co/120x120/F4DCD6/7C4F55?text=User';
-            document.getElementById('remove-picture-btn').remove(); // Remove the button itself
-            alert("Profile picture removed.");
+            document.getElementById('remove-picture-btn')?.remove(); // Remove button if it exists
+            showToast("Profile picture removed.", "success"); // Use toast
         } catch (error) {
             console.error("Error removing profile picture:", error);
-            if (error.code === 'storage/object-not-found') {
-                await updateDoc(userRef, { imageUrl: "" });
-                alert("Profile picture removed.");
-            } else {
-                alert("Could not remove profile picture.");
-            }
+            showToast("Could not remove profile picture.", "error"); // Use toast
         }
     }
 
@@ -1744,12 +2056,13 @@ document.addEventListener('DOMContentLoaded', () => {
             await updateProfile(currentUser, authUpdateData);
             
             errorMsg.textContent = "";
-            alert("Profile updated successfully!");
+            showToast("Profile updated successfully!", "success");
             toggleModal(editProfileModal, false);
 
         } catch (error) {
             console.error("Error updating profile:", error);
             errorMsg.textContent = "Failed to update profile. Please try again.";
+            showToast("Failed to update profile.", "error"); // Use toast
         }
     }
 

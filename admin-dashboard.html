@@ -18,6 +18,7 @@
             </div>
             <nav class="sidebar-nav">
                 <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+                <a href="#income" class="nav-link"><i class="fas fa-coins"></i><span>Income</span></a>
                 <a href="#users" class="nav-link"><i class="fas fa-users"></i><span>Users</span></a>
                 <a href="#products" class="nav-link"><i class="fas fa-box-open"></i><span>Products</span></a>
                 <a href="#hairstyles" class="nav-link"><i class="fas fa-cut"></i><span>Hairstyles</span></a>
@@ -87,6 +88,34 @@
                         </div>
                     </section>
                 </section>
+
+                <!-- *** NEW: Income Page *** -->
+                <section id="income-page" class="dashboard-page fade-in-up" style="display: none;">
+                    <div class="income-metrics-grid">
+                        <div class="metric-card income-today">
+                            <h2>Income Today</h2>
+                            <p id="income-today-display" class="income-amount">R 0.00</p>
+                        </div>
+                        <div class="metric-card total-income">
+                            <h2>Total Recorded Income</h2>
+                            <p id="total-income-display" class="income-amount">R 0.00</p>
+                        </div>
+                        <!-- Add placeholders for Week/Month/Year later if needed -->
+                         <div class="metric-card income-week">
+                            <h2>Income This Week</h2>
+                            <p id="income-week-display" class="income-amount">R 0.00</p>
+                        </div>
+                        <div class="metric-card income-month">
+                            <h2>Income This Month</h2>
+                            <p id="income-month-display" class="income-amount">R 0.00</p>
+                        </div>
+                    </div>
+                    <!-- Optional: Add link/button to detailed report page for Phase 2 -->
+                    <!-- <div class="page-actions">
+                        <a href="#income-report" class="btn">View Detailed Income Report</a>
+                    </div> -->
+                </section>
+                 <!-- *** END NEW: Income Page *** -->
 
                 <!-- Users Page -->
                 <section id="users-page" class="dashboard-page" style="display: none;">

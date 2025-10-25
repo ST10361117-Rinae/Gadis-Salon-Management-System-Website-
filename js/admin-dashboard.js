@@ -29,6 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const lowStockList = document.getElementById('low-stock-list');
     const soldOutList = document.getElementById('sold-out-list');
 
+    // --- NEW: Income Page Elements ---
+    const incomeTodayDisplay = document.getElementById('income-today-display');
+    const totalIncomeDisplay = document.getElementById('total-income-display');
+    const incomeWeekDisplay = document.getElementById('income-week-display');
+    const incomeMonthDisplay = document.getElementById('income-month-display');
+
     // User Management Element Selections ---
     const usersTableBody = document.getElementById('users-table-body');
     const createUserBtn = document.getElementById('create-user-btn');
@@ -178,6 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOpenOrderId = null; // Store ID for edit/delete
     let confirmPromiseResolve = null; // For confirmation modal
     let currentAdminId = null;
+    let currentIncomeRecordsListener = null; // --- NEW: Listener for income
+    let currentTotalIncomeListener = null; // --- NEW: Listener for total income
 
     const functions = getFunctions(auth.app); // Initialize Firebase Functions
 
@@ -307,14 +315,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.hash = targetId;
         });
     });
-
-    // --- NEW: Handle browser back/forward buttons ---
     window.addEventListener('popstate', () => {
         const hash = window.location.hash.substring(1);
         handleNavigation(hash || 'dashboard');
     });
     
     function handleNavigation(targetId) {
+        if (currentIncomeRecordsListener) currentIncomeRecordsListener();
+        if (currentTotalIncomeListener) currentTotalIncomeListener();
         const targetPage = document.getElementById(`${targetId}-page`);
 
         navLinks.forEach(navLink => navLink.classList.remove('active'));
@@ -328,10 +336,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         contentPages.forEach(page => page.style.display = 'none');
-
-        //if (targetPage) {
-          //  targetPage.style.display = 'block';
-        //}
 
         const pageToShow = document.getElementById(`${targetId}-page`);
         if (pageToShow) {
@@ -348,6 +352,9 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'dashboard':
                 fetchDashboardMetrics();
                 break;
+            case 'income': 
+                fetchIncomeData(); 
+                break; 
             case 'users':
                 fetchUsers();
                 break;
@@ -385,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePageHeader(pageId) {
         const titles = {
             dashboard: { title: 'Dashboard', subtitle: "A live overview of your salon's activity." },
+            income: { title: 'Income Report', subtitle: 'View sales and revenue.' },
             users: { title: 'User Management', subtitle: 'View, create, and manage all user accounts.' },
             products: { title: 'Product Management', subtitle: 'Manage your salon\'s product inventory.' },
             hairstyles: { title: 'Hairstyle Management', subtitle: 'Manage your salon\'s hairstyle services.' },
@@ -457,6 +465,74 @@ document.addEventListener('DOMContentLoaded', () => {
             soldOutList.innerHTML = soldOutHtml || '<li>No items are sold out.</li>';
         });
     }
+
+    // --- NEW: 4.5. Income Page Data Fetching ---
+    function fetchIncomeData() {
+        // Detach previous listeners if they exist
+        if (currentIncomeRecordsListener) currentIncomeRecordsListener();
+        if (currentTotalIncomeListener) currentTotalIncomeListener();
+
+        // 1. Get Total Income (Phase 1)
+        const totalIncomeRef = doc(db, "app_content", "income_tracking");
+        currentTotalIncomeListener = onSnapshot(totalIncomeRef, (doc) => {
+            if (doc.exists()) {
+                const totalIncome = doc.data().totalIncome || 0;
+                totalIncomeDisplay.textContent = `R ${totalIncome.toFixed(2)}`;
+            } else {
+                totalIncomeDisplay.textContent = `R 0.00`;
+            }
+        }, (error) => {
+            console.error("Error fetching total income:", error);
+            totalIncomeDisplay.textContent = 'Error';
+        });
+
+        // 2. Calculate Today, Week, Month (Phase 1 & 2)
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfWeekDate = new Date(now.setDate(now.getDate() - now.getDay())); // Get last Sunday
+        const startOfWeek = new Date(startOfWeekDate.getFullYear(), startOfWeekDate.getMonth(), startOfWeekDate.getDate()).getTime();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+        // Query for all records since the start of the month
+        const incomeQuery = query(collection(db, "income_records"), where("createdAt", ">=", new Date(startOfMonth)));
+        
+        currentIncomeRecordsListener = onSnapshot(incomeQuery, (snapshot) => {
+            let todaySum = 0;
+            let weekSum = 0;
+            let monthSum = 0;
+
+            snapshot.forEach(doc => {
+                const record = doc.data();
+                if (!record.createdAt) return; // Skip records without a timestamp
+
+                const createdAt = record.createdAt.toMillis(); // Convert Firestore Timestamp to JS timestamp
+                const amount = record.amount || 0;
+
+                // All records in this query are for this month
+                monthSum += amount;
+
+                if (createdAt >= startOfWeek) {
+                    weekSum += amount;
+                }
+
+                if (createdAt >= startOfToday) {
+                    todaySum += amount;
+                }
+            });
+
+            // Update the UI
+            incomeTodayDisplay.textContent = `R ${todaySum.toFixed(2)}`;
+            incomeWeekDisplay.textContent = `R ${weekSum.toFixed(2)}`;
+            incomeMonthDisplay.textContent = `R ${monthSum.toFixed(2)}`;
+
+        }, (error) => {
+            console.error("Error fetching income records:", error);
+            incomeTodayDisplay.textContent = 'Error';
+            incomeWeekDisplay.textContent = 'Error';
+            incomeMonthDisplay.textContent = 'Error';
+        });
+    }
+    // --- END NEW Income Logic ---
 
     //  5. All logic for User Management ---
 

@@ -7,6 +7,7 @@
 import { auth, db, storage } from './firebase-config.js';
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, orderBy, getDocs, FieldValue, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -207,6 +208,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeSupportChat; // --- NEW: For support chat listener
     let currentOpenTicketId = null; // --- NEW: To track the open support ticket
 
+    const functions = getFunctions(auth.app);
+
     // --- 1. Hamburger Menu Logic ---
     if (hamburgerMenu) {
         hamburgerMenu.addEventListener('click', () => {
@@ -299,43 +302,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Check user's login state
     onAuthStateChanged(auth, async user => {
-        if (user) {
-            currentStylistId = user.uid;
-            // Fetch user data once and store it
-            const userDocRef = doc(db, "users", currentStylistId);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                currentUserData = userDoc.data();
-                // --- NEW: Also display the user's profile when the page loads ---
-                displayUserProfile();
+            if (user) {
+                currentStylistId = user.uid;
+                const userDocRef = doc(db, "users", currentStylistId);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    currentUserData = userDoc.data();
+                     // --- Ensure user is a WORKER ---
+                     if (currentUserData.role !== 'WORKER') {
+                         console.warn("User is not a WORKER. Redirecting...");
+                         window.location.href = 'login.html'; // Or a 'not-authorized' page
+                         return;
+                     }
+                    displayUserProfile(); 
+                } else {
+                     console.error("User document not found for logged-in user!");
+                     window.location.href = 'login.html';
+                     return;
+                }
+                console.log("Stylist authenticated with UID:", currentStylistId);
+                handleNavigation('schedule'); // Load the default page
+            } else {
+                console.log("No user logged in, redirecting...");
+                window.location.href = 'login.html';
             }
-            console.log("Stylist authenticated with UID:", currentStylistId);
-            fetchStylistSchedule(currentStylistId); // Load the default page
-        } else {
-            console.log("No user logged in, redirecting...");
-            window.location.href = 'login.html';
-        }
-    });
+        });
 
     // 4. Function to get the stylist's confirmed appointments
     async function fetchStylistSchedule(stylistId) {
         appointmentsContainer.innerHTML = '<p>Loading schedule...</p>';
-        const q = query(collection(db, "bookings"), where("stylistId", "==", stylistId), where("status", "==", "Confirmed"));
-
+        const q = query(collection(db, "bookings"), where("stylistId", "==", stylistId), where("status", "==", "Confirmed"), orderBy("timestamp", "asc"));
+        
         onSnapshot(q, async (querySnapshot) => {
             if (querySnapshot.empty) {
                 appointmentsContainer.innerHTML = '<p>You have no confirmed appointments.</p>';
                 return;
             }
-
-            let cardsHtml = '';
-            for (const docSnap of querySnapshot.docs) {
+            const cardPromises = querySnapshot.docs.map(async (docSnap) => {
                 const booking = docSnap.data();
+                 if (!booking.hairstyleId) return '';
                 const hairstyleDoc = await getDoc(doc(db, "hairstyles", booking.hairstyleId));
                 const imageUrl = hairstyleDoc.exists() ? hairstyleDoc.data().imageUrl : 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
 
-                cardsHtml += `
+                // --- NEW: Add unread count badge ---
+                const unreadCount = booking.workerUnreadCount || 0;
+                const unreadBadge = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
+
+                return `
                     <div class="booking-card confirmed" data-booking-id="${docSnap.id}">
+                        ${unreadBadge} 
                         <img src="${imageUrl}" alt="${booking.serviceName}">
                         <div class="card-content">
                             <h3>${booking.serviceName}</h3>
@@ -343,52 +358,48 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p><strong>Date:</strong> ${booking.date} at ${booking.time}</p>
                         </div>
                         <div class="card-footer">
-                            <span class="status-confirmed">Confirmed</span>
+                             <span class="status-badge status-confirmed">Confirmed</span>
                         </div>
                     </div>
                 `;
-            }
+            });
+            const cardsHtml = (await Promise.all(cardPromises)).join('');
             appointmentsContainer.innerHTML = cardsHtml;
+        }, (error) => {
+             console.error("Error fetching schedule:", error);
+             appointmentsContainer.innerHTML = '<p>Error loading schedule. Please try again later.</p>';
         });
     }
 
     // 5. Function to get new booking requests for the stylist
     async function fetchNewBookings(stylistId) {
         newBookingsContainer.innerHTML = '<p>Loading new requests...</p>';
-        const q = query(collection(db, "bookings"), where("status", "==", "Pending"));
+        const q = query(collection(db, "bookings"), where("status", "==", "Pending"), orderBy("timestamp", "asc"));
 
         onSnapshot(q, async (querySnapshot) => {
             let hasPendingBookings = false;
-
             console.log(`Found ${querySnapshot.size} pending booking(s) in total. Checking each one...`);
 
             const promises = querySnapshot.docs.map(async (bookingDoc) => {
                 const booking = { ...bookingDoc.data(), id: bookingDoc.id };
+                if (!booking.hairstyleId) return null;
 
                 const isDeclinedByCurrentUser = booking.declinedBy && booking.declinedBy.includes(stylistId);
-                if (isDeclinedByCurrentUser) {
-                    return null; // Skip this booking entirely
-                }
-
+                if (isDeclinedByCurrentUser) return null;
+                
                 const hairstyleDocRef = doc(db, "hairstyles", booking.hairstyleId);
                 const hairstyleDoc = await getDoc(hairstyleDocRef);
+                if (!hairstyleDoc.exists()) return null;
 
-                let shouldDisplay = false;
-                if (hairstyleDoc.exists() && currentUserData) {
-                    const hairstyle = hairstyleDoc.data();
-                    const isStylistQualified = hairstyle.availableStylistIds && hairstyle.availableStylistIds.includes(stylistId);
+                const hairstyle = hairstyleDoc.data();
+                const isStylistQualified = hairstyle.availableStylistIds?.includes(stylistId);
 
-                    const isForAnyAvailable = booking.stylistName === "Any Available" && isStylistQualified;
-                    const isDirectlyAssigned = booking.stylistId === stylistId || booking.stylistName === currentUserData.name;
+                const isForAnyAvailable = booking.stylistName === "Any Available" && isStylistQualified;
+                const isDirectlyAssigned = booking.stylistName === currentUserData.name; // Use name for matching
 
-                    if (isForAnyAvailable || isDirectlyAssigned) {
-                        shouldDisplay = true;
-                    }
-                }
-
-                if (shouldDisplay) {
+                 if (isForAnyAvailable || isDirectlyAssigned) {
                     hasPendingBookings = true;
-                    const imageUrl = hairstyleDoc.data().imageUrl || 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
+                    const imageUrl = hairstyle.imageUrl || 'https://placehold.co/600x400/F4DCD6/333333?text=No+Image';
                     return `
                         <div class="booking-card pending" data-booking-id="${booking.id}">
                             <img src="${imageUrl}" alt="${booking.serviceName}">
@@ -416,22 +427,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 newBookingsContainer.innerHTML = '<p>No new booking requests for you.</p>';
             }
 
-            // --- NEW: Notification Dot Logic ---
-            const notificationDot = newBookingsLink.querySelector('.notification-dot');
-            if (hasPendingBookings) {
-                if (!notificationDot) { // Create dot if it doesn't exist
-                    const dot = document.createElement('span');
-                    dot.className = 'notification-dot';
-                    newBookingsLink.appendChild(dot);
-                }
-                newBookingsLink.querySelector('.notification-dot').style.display = 'block';
-                newBookingsContainer.innerHTML = cardsHtml;
-            } else {
-                if (notificationDot) {
-                    notificationDot.style.display = 'none';
-                }
-                newBookingsContainer.innerHTML = '<p>No new booking requests for you.</p>';
+            // --- Notification Dot Logic ---
+            const notificationDot = newBookingsLink?.querySelector('.notification-dot');
+            if (notificationDot) {
+                 notificationDot.style.display = hasPendingBookings ? 'block' : 'none';
+            } else if (hasPendingBookings && newBookingsLink) {
+                 const dot = document.createElement('span');
+                 dot.className = 'notification-dot';
+                 dot.style.display = 'block';
+                 newBookingsLink.appendChild(dot);
             }
+        }, (error) => {
+             console.error("Error fetching new bookings:", error);
+             newBookingsContainer.innerHTML = '<p>Error loading booking requests.</p>';
         });
     }
 
@@ -465,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 7. Function to fetch product orders
     async function fetchProductOrders() {
         ordersContainer.innerHTML = '<p>Loading active orders...</p>';
-        const q = query(collection(db, "product_orders"), where("status", "in", ["Pending Pickup", "Ready for Pickup"]));
+         const q = query(collection(db, "product_orders"), where("status", "in", ["Pending Pickup", "Ready for Pickup"]), orderBy("timestamp", "desc"));
 
         onSnapshot(q, (querySnapshot) => {
             let html = '';
@@ -475,46 +483,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 querySnapshot.forEach(doc => {
                     const order = doc.data();
                     let statusClass = order.status === 'Pending Pickup' ? 'status-pending' : 'status-ready';
-
-                    // Generate stacked images HTML
+                    
                     let imagesHtml = '';
                     if (order.items && order.items.length > 0) {
-                        // Show up to 3 images
                         order.items.slice(0, 3).forEach(item => {
                             imagesHtml += `<img src="${item.imageUrl}" alt="${item.name}">`;
                         });
                     }
 
                     html += `
-                            <div class="order-card" data-order-id="${doc.id}">
-                                <div class="order-card-images">${imagesHtml}</div>
-                                <div class="card-content">
-                                    <h3>Order #${doc.id.slice(-6)}</h3>
-                                    <p><strong>Customer:</strong> ${order.customerName}</p>
-                                </div>
-                                <div class="card-footer">
-                                    <span class="status-badge ${statusClass}">${order.status}</span>
-                                </div>
+                        <div class="order-card" data-order-id="${doc.id}">
+                            <div class="order-card-images">${imagesHtml}</div>
+                            <div class="card-content">
+                                <h3>Order #${doc.id.slice(-6)}</h3>
+                                <p><strong>Customer:</strong> ${order.customerName}</p>
                             </div>
-                        `;
+                            <div class="card-footer">
+                                <span class="status-badge ${statusClass}">${order.status}</span>
+                            </div>
+                        </div>
+                    `;
                 });
             }
             ordersContainer.innerHTML = html;
 
             // --- Notification Dot Logic for Orders ---
-            let notificationDot = ordersLink.querySelector('.notification-dot');
-            if (!querySnapshot.empty) { // If there are pending orders
-                if (!notificationDot) {
-                    notificationDot = document.createElement('span');
-                    notificationDot.className = 'notification-dot';
-                    ordersLink.appendChild(notificationDot);
-                }
-                notificationDot.style.display = 'block';
-            } else { // If there are no pending orders
-                if (notificationDot) {
-                    notificationDot.style.display = 'none';
-                }
-            }
+            const notificationDot = ordersLink?.querySelector('.notification-dot');
+             if (notificationDot) {
+                 notificationDot.style.display = !querySnapshot.empty ? 'block' : 'none';
+             } else if (!querySnapshot.empty && ordersLink) {
+                 const dot = document.createElement('span');
+                 dot.className = 'notification-dot';
+                 dot.style.display = 'block';
+                 ordersLink.appendChild(dot);
+             }
+        }, (error) => {
+             console.error("Error fetching product orders:", error);
+             ordersContainer.innerHTML = '<p>Error loading product orders.</p>';
         });
     }
 
@@ -557,7 +562,12 @@ document.addEventListener('DOMContentLoaded', () => {
             timeOffRequestsContainer.innerHTML = requestsHtml;
         }, (error) => {
             console.error("Error fetching time off requests:", error);
-            timeOffRequestsContainer.innerHTML = '<tr><td colspan="4">Error loading requests.</td></tr>';
+            // --- MODIFIED: Show index error message ---
+            if (error.code === 'failed-precondition') {
+                 timeOffRequestsContainer.innerHTML = '<tr><td colspan="4">Error: Missing database index. Please contact admin.</td></tr>';
+            } else {
+                 timeOffRequestsContainer.innerHTML = '<tr><td colspan="4">Error loading requests.</td></tr>';
+            }
         });
     }
 
@@ -792,15 +802,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function markPreviousMessagesAsRead(ticketId) {
+         if (!currentStylistId) return; // Added guard clause
         const repliesRef = collection(db, "support_messages", ticketId, "replies");
         const q = query(repliesRef, where("senderUid", "==", currentStylistId), where("status", "!=", "Read"));
-
+        
         try {
             const querySnapshot = await getDocs(q);
+             // --- NEW: Use writeBatch ---
+             const batch = writeBatch(db);
             querySnapshot.forEach(docSnap => {
-                const messageRef = doc(db, "support_messages", ticketId, "replies", docSnap.id);
-                updateDoc(messageRef, { status: "Read" });
+                batch.update(docSnap.ref, { status: "Read" }); // Use batch update
             });
+            await batch.commit(); // Commit all updates at once
         } catch (error) {
             console.error("Error marking messages as read:", error);
         }
@@ -1036,36 +1049,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Order Modal Footer Buttons Listener
     orderModalFooter?.addEventListener('click', async (e) => {
-        const target = e.target;
+         const target = e.target;
         if (target.matches('.action-btn')) {
             const orderId = target.dataset.id;
             const orderRef = doc(db, "product_orders", orderId);
             let newStatus = '';
             let confirmMessage = '';
             let successMessage = '';
+            let isCompleting = false; // --- NEW Flag ---
 
             if (target.id === 'modal-mark-ready') {
-                newStatus = "Ready for Pickup";
-                confirmMessage = "Mark this order as ready for pickup?";
-                successMessage = "Order marked as ready!";
+                 newStatus = "Ready for Pickup";
+                 confirmMessage = "Mark this order as ready for pickup?";
+                 successMessage = "Order marked as ready!";
             } else if (target.id === 'modal-mark-collected') {
-                newStatus = "Completed";
-                confirmMessage = "Mark this order as collected and complete?";
-                successMessage = "Order marked as complete!";
+                 newStatus = "Completed"; // This will be set by the cloud function
+                 confirmMessage = "Mark this order as collected and complete?";
+                 successMessage = "Order marked as complete!";
+                 isCompleting = true; // --- NEW Flag ---
             }
 
-            if (newStatus && confirmMessage) {
-                const confirmed = await showConfirmationModal(confirmMessage, 'btn-primary', 'Confirm');
-                if (confirmed) {
-                    try {
-                        await updateDoc(orderRef, { status: newStatus });
-                        showToast(successMessage, 'success'); // Use showToast
-                        closeOrderModal();
-                    } catch (error) {
-                        console.error("Error updating order status:", error);
-                        showToast("Failed to update order status.", "error"); // Use showToast
-                    }
-                }
+            if (confirmMessage) { // Check if a valid button was clicked
+                 const confirmed = await showConfirmationModal(confirmMessage, 'btn-primary', 'Confirm');
+                 if (confirmed) {
+                     try {
+                         if (isCompleting) {
+                             // --- MODIFIED: Call Cloud Function ---
+                             const markOrderPaid = httpsCallable(functions, 'markOrderAsPaid');
+                             await markOrderPaid({ orderId: orderId });
+                         } else {
+                             // --- Original logic for other statuses ---
+                             await updateDoc(orderRef, { status: newStatus });
+                         }
+                         showToast(successMessage, 'success');
+                         closeOrderModal();
+                     } catch (error) {
+                          console.error("Error updating order status:", error);
+                          showToast(error.message || "Failed to update order status.", "error"); // Show function error
+                     }
+                 }
             }
         }
     });
@@ -1097,24 +1119,34 @@ document.addEventListener('DOMContentLoaded', () => {
         modalOverlay.style.display = 'flex';
         setTimeout(() => {
             modalOverlay.style.opacity = '1';
-            modal.style.transform = 'scale(1)';
+            if(modal) modal.style.transform = 'scale(1)';
         }, 10);
+
+        // --- NEW: Reset unread count on open ---
+         try {
+             const bookingRef = doc(db, "bookings", bookingId);
+             await updateDoc(bookingRef, { workerUnreadCount: 0 });
+             console.log(`Reset unread count for booking ${bookingId}`);
+         } catch (error) {
+             console.warn("Could not reset unread count:", error);
+         }
+        // --- END NEW ---
 
         const bookingRef = doc(db, "bookings", bookingId);
         const bookingSnap = await getDoc(bookingRef);
 
         if (bookingSnap.exists()) {
             const booking = bookingSnap.data();
-            modalServiceName.textContent = booking.serviceName;
-            modalCustomerName.textContent = booking.customerName;
-            modalBookingDate.textContent = booking.date;
-            modalBookingTime.textContent = booking.time;
+            if(modalServiceName) modalServiceName.textContent = booking.serviceName;
+            if(modalCustomerName) modalCustomerName.textContent = booking.customerName;
+            if(modalBookingDate) modalBookingDate.textContent = booking.date;
+            if(modalBookingTime) modalBookingTime.textContent = booking.time;
         }
 
         const messagesRef = collection(db, "bookings", bookingId, "messages");
         const q = query(messagesRef, orderBy("timestamp"));
 
-        if (unsubscribeChat) unsubscribeChat(); // Unsubscribe from previous listener
+        if (unsubscribeChat) unsubscribeChat();
         unsubscribeChat = onSnapshot(q, (snapshot) => {
             // Auto-read logic
             const docs = snapshot.docs;
@@ -1209,49 +1241,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
     completeBookingBtn?.addEventListener('click', async () => {
         if (!currentOpenBookingId) return;
-        const confirmed = await showConfirmationModal('Mark this booking as complete?', 'btn-primary', 'Complete');
+        const confirmed = await showConfirmationModal('Mark this booking as complete and paid?', 'btn-primary', 'Complete');
+        
         if (confirmed) {
-            const bookingRef = doc(db, "bookings", currentOpenBookingId);
+            // --- MODIFIED LOGIC: Call Cloud Function ---
+            const markPaid = httpsCallable(functions, 'markBookingAsPaid');
             try {
-                await updateDoc(bookingRef, { status: 'Completed', workerUnreadCount: 0 });
-                showToast('Booking marked as complete!', 'success'); // Use showToast
+                // Disable button?
+                completeBookingBtn.disabled = true;
+                const result = await markPaid({ bookingId: currentOpenBookingId });
+                
+                console.log(result.data.message); // Log success message from function
+                showToast('Booking marked as paid!', 'success');
                 closeBookingModal();
+
             } catch (error) {
-                console.error("Error completing booking:", error);
-                showToast("Failed to complete booking.", "error"); // Use showToast
+                console.error("Error marking booking as paid:", error);
+                // 'error.message' from a callable function is user-friendly
+                showToast(`Error: ${error.message}`, "error");
+            } finally {
+                 completeBookingBtn.disabled = false; // Re-enable
             }
+            // --- END MODIFIED LOGIC ---
         }
     });
 
     cancelBookingBtn?.addEventListener('click', async () => {
         if (!currentOpenBookingId) return;
-        // --- MODIFIED: Use custom prompt ---
         const reason = await showReasonPromptModal({
             title: 'Cancel Booking',
             message: 'Please provide a reason for cancellation:',
             submitText: 'Confirm Cancellation',
             submitClass: 'btn-danger'
         });
-        if (reason) { // Only proceed if a reason was submitted
-            const confirmed = await showConfirmationModal(`Cancel booking with reason: "${reason}"?`, 'btn-danger', 'Cancel Booking');
-            if (confirmed) {
-                const bookingRef = doc(db, "bookings", currentOpenBookingId);
-                try {
-                    await updateDoc(bookingRef, {
-                        status: 'Cancelled',
-                        cancellationReason: reason,
-                        workerUnreadCount: 0
-                    });
-                    showToast('Booking has been cancelled.', 'success'); // Use showToast
-                    closeBookingModal();
-                } catch (error) {
-                    console.error("Error cancelling booking:", error);
-                    showToast("Failed to cancel booking.", "error"); // Use showToast
-                }
-            }
-        } else {
-            console.log("Cancellation cancelled by user.");
-        }
+        if (reason !== null) {
+             const confirmed = await showConfirmationModal(`Cancel booking with reason: "${reason}"?`, 'btn-danger', 'Cancel Booking');
+             if(confirmed){
+                 const bookingRef = doc(db, "bookings", currentOpenBookingId);
+                 try {
+                     await updateDoc(bookingRef, {
+                         status: 'Cancelled',
+                         cancellationReason: reason,
+                         workerUnreadCount: 0
+                     });
+                     showToast('Booking has been cancelled.', 'success');
+                     closeBookingModal();
+                 } catch(error) { console.error("Error cancelling booking:", error); showToast("Failed to cancel booking.", "error"); }
+             }
+        } else { console.log("Cancellation cancelled by user."); }
     });
 
 
@@ -1273,59 +1310,63 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle the "Save Changes" button click
     profileForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!currentStylistId) return;
+        if (!currentStylistId || !auth.currentUser) { // Check auth.currentUser
+             showToast("Authentication error. Please re-login.", "error");
+             return;
+        }
 
         const newName = profileForm.name.value.trim();
         const newPhone = profileForm.phone.value.trim();
-        if (profileErrorMsg) profileErrorMsg.textContent = ''; // Clear previous errors
+        if(profileErrorMsg) profileErrorMsg.textContent = '';
 
         if (newName.length < 2) {
-            if (profileErrorMsg) profileErrorMsg.textContent = 'Please enter a valid name (at least 2 characters).';
+             if(profileErrorMsg) profileErrorMsg.textContent = 'Please enter a valid name (at least 2 characters).';
             return;
         }
         const phoneRegex = /^0\d{9}$/;
         if (!phoneRegex.test(newPhone)) {
-            if (profileErrorMsg) profileErrorMsg.textContent = 'Please enter a valid 10-digit SA phone number (e.g., 082...).';
+             if(profileErrorMsg) profileErrorMsg.textContent = 'Please enter a valid 10-digit SA phone number (e.g., 082...).';
             return;
         }
 
         const userDocRef = doc(db, "users", currentStylistId);
         const submitButton = profileForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true; // Disable button during save
+        submitButton.disabled = true;
 
         try {
-            let downloadURL = currentUserData.imageUrl; // Keep old URL unless new file uploaded
+            let downloadURL = currentUserData.imageUrl || '';
             if (newProfileImageFile) {
                 const storageRef = ref(storage, `profile_pictures/${currentStylistId}`);
                 await uploadBytes(storageRef, newProfileImageFile);
                 downloadURL = await getDownloadURL(storageRef);
-                newProfileImageFile = null; // Reset after upload
+                newProfileImageFile = null;
             }
 
-            await updateDoc(userDocRef, {
-                name: newName,
-                phone: newPhone,
-                imageUrl: downloadURL // Update with new or existing URL
-            });
-
-            // Update Auth profile as well
+            // --- MODIFIED: Added updateProfile call ---
             await updateProfile(auth.currentUser, {
                 displayName: newName,
                 photoURL: downloadURL
             });
+            
+            // Update Firestore
+            await updateDoc(userDocRef, {
+                name: newName,
+                phone: newPhone,
+                imageUrl: downloadURL
+            });
+            
+             // Update local data
+             currentUserData.name = newName;
+             currentUserData.phone = newPhone;
+             currentUserData.imageUrl = downloadURL;
 
-            // --- Update local data ---
-            currentUserData.name = newName;
-            currentUserData.phone = newPhone;
-            currentUserData.imageUrl = downloadURL;
-
-            showToast('Profile updated successfully!', 'success'); // Use showToast
+            showToast('Profile updated successfully!', 'success');
         } catch (error) {
             console.error("Error updating profile: ", error);
-            if (profileErrorMsg) profileErrorMsg.textContent = "Failed to update profile. Please try again.";
-            showToast("Failed to update profile.", "error"); // Use showToast
+            if(profileErrorMsg) profileErrorMsg.textContent = "Failed to update profile. Please try again.";
+            showToast("Failed to update profile.", "error");
         } finally {
-            submitButton.disabled = false; // Re-enable button
+             submitButton.disabled = false;
         }
     });
 

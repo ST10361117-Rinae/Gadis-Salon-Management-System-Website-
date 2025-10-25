@@ -3919,3 +3919,39 @@ thead th.sorted i {
     color: #4fc3f7; /* Blue 'read' color */
 }
 /* --- END NEW Chat Bubble Styles --- */
+
+/* --- NEW: Income Page Styles --- */
+.income-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+.income-metrics-grid .metric-card {
+    background: var(--white, #fff);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color, rgba(0,0,0,0.08));
+}
+.income-metrics-grid .metric-card h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: var(--muted, #7C4F55);
+    font-weight: 600;
+}
+.income-metrics-grid .metric-card p.income-amount {
+    margin: 0;
+    font-size: 2.5rem; /* Slightly smaller than main dashboard */
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-primary, #212121);
+}
+/* Highlight "Income Today" card */
+.income-metrics-grid .metric-card.income-today p.income-amount {
+    color: #28a745; /* Green for today's income */
+}
+/* Highlight "Total Income" card */
+.income-metrics-grid .metric-card.total-income p.income-amount {
+    color: var(--primary, #D67A84);
+}
+/* --- END Income Page Styles --- */

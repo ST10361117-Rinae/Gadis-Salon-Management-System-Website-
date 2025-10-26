@@ -62,7 +62,7 @@ This web application serves two key user roles—Stylist and Admin—each with a
 1.  **Clone the repository:**
 
     ```bash
-    git clone [YOUR_WEBSITE_REPOSITORY_URL_HERE]
+    git clone [[ttps://github.com/ST10361117-Rinae/Gadis-Salon-Management-System-Website-](https://github.com/ST10361117-Rinae/Gadis-Salon-Management-System-Website-)]
     ```
 
 2.  **Firebase Configuration:**
@@ -87,7 +87,7 @@ This web application serves two key user roles—Stylist and Admin—each with a
 
 ## 📺 Project Showcase
 
-**Live Site:** [LINK_TO_HOSTED_WEBSITE_HERE]
+**Live Site:** [https://gdsm-6a8d0.firebaseapp.com/](https://gdsm-6a8d0.firebaseapp.com/)]
 
 ## 🙏 Acknowledgements
 

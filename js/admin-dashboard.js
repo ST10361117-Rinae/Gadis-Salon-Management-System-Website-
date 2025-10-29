@@ -1146,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingModalTime.textContent = booking.time;
         
         // --- NEW: Populate Edit Mode (hidden) ---
-        populateStylistDropdown(booking.stylistId);
+        populateBookingStylistDropdown(booking.stylistId);
         bookingModalDateInput.value = booking.date;
         bookingModalTimeInput.value = booking.time; // This assumes time is saved in a format the input likes
         bookingModalStatusSelect.value = booking.status;
@@ -1176,13 +1176,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- NEW: Helper function to populate stylist dropdown ---
-    function populateStylistDropdown(selectedStylistId) {
+    function populateBookingStylistDropdown(selectedStylistId) {
+        if (!bookingModalStylistSelect) return; // Guard clause
         let optionsHtml = '<option value="">-- Select Stylist --</option>';
         allStylists.forEach(stylist => {
+            // Check if this stylist is the selected one
             const selected = stylist.id === selectedStylistId ? 'selected' : '';
             optionsHtml += `<option value="${stylist.id}" ${selected}>${stylist.name}</option>`;
         });
         bookingModalStylistSelect.innerHTML = optionsHtml;
+        // --- FIX: Also set the value directly ---
+        if(selectedStylistId) {
+            bookingModalStylistSelect.value = selectedStylistId;
+        }
     }
 
    function closeAdminBookingModal() {

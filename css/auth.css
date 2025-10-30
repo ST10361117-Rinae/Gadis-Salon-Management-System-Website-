@@ -216,6 +216,43 @@ body {
     color: var(--error);
 }
 
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    margin: 1.5rem 0;
+}
+.divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+.divider span {
+    padding: 0 1rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.btn-google {
+    background: var(--white);
+    color: var(--text-primary);
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-google:hover {
+    background: var(--soft);
+    border-color: #ccc;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+.btn-google i {
+    margin-right: 0.75rem;
+    color: #DB4437; /* Google Red */
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
